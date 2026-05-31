@@ -10,9 +10,8 @@ require("dotenv").config();
 
 const app = express();
 
-const GLPI_URL = process.env.GLPI_URL;
-const GLPI_USER_TOKEN = process.env.GLPI_USER_TOKEN;
-const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN;
+const BACKEND_URL = "http://10.188.74.8:3001";
+const ALADIN_URL = "https://www.appigs.univ-avignon.fr/extranet/interv_ext.html";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -22,13 +21,68 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+app.use(cors());
+app.use(express.json());
+
 function getDeviceFingerprint(req) {
   const userAgent = req.headers["user-agent"] || "";
   return crypto.createHash("sha256").update(userAgent).digest("hex");
 }
 
+function findPcByIdOrToken(value) {
+  return pcs.find((p) => p.id === value || p.token === value);
+}
+
+function getPanneFinale(type_panne, custom_panne) {
+  return type_panne === "Autre" ? custom_panne : type_panne;
+}
+
+function buildAladinUrl(ticketData) {
+  const { nom, prenom, email, pc_id, type_panne, custom_panne, description } =
+    ticketData;
+
+  const pc = pcs.find((p) => p.id === pc_id);
+  const panneFinale = getPanneFinale(type_panne, custom_panne);
+
+  const titre = `Panne PC ${pc_id} - ${panneFinale}`;
+
+  const descriptionAladin =
+  `Signalement de panne informatique. ` +
+  `Salle : ${pc.salle}. ` +
+  `Poste : ${pc.poste}. ` +
+  `PC ID : ${pc_id}. ` +
+  `Type de panne : ${panneFinale}. ` +
+  `${type_panne === "Autre" ? `Panne precisee : ${custom_panne}. ` : ""}` +
+  `Description : ${description || "Aucune description"}. ` +
+  `Merci de ne pas prendre en compte cette demande s'il s'agit d'un test.`;
+
+  return (
+    `${ALADIN_URL}?inst=1` +
+    `&nom=${encodeURIComponent(nom)}` +
+    `&prenom=${encodeURIComponent(prenom)}` +
+    `&mel=${encodeURIComponent(email)}` +
+    `&tit=${encodeURIComponent(titre)}` +
+    `&pb=${encodeURIComponent(descriptionAladin)}`
+  );
+}
+
+function saveTicketLocal(ticketData) {
+  const { pc_id, email, type_panne, custom_panne, description } = ticketData;
+
+  db.prepare(`
+    INSERT INTO tickets (
+      pc_id,
+      email,
+      type_panne,
+      custom_panne,
+      description
+    )
+    VALUES (?, ?, ?, ?, ?)
+  `).run(pc_id, email, type_panne, custom_panne, description);
+}
+
 async function sendValidationEmail(email, token) {
-  const validationLink = `http://10.120.2.212:3001/api/verify-email/${token}`;
+  const validationLink = `${BACKEND_URL}/api/verify-email/${token}`;
 
   await transporter.sendMail({
     from: `"Ticket Panne CERI" <${process.env.MAIL_USER}>`,
@@ -41,98 +95,6 @@ async function sendValidationEmail(email, token) {
       <a href="${validationLink}">Valider mon appareil</a>
     `,
   });
-}
-
-app.use(cors());
-app.use(express.json());
-
-async function initGlpiSession() {
-  const response = await fetch(`${GLPI_URL}/initSession`, {
-    method: "GET",
-    headers: {
-      Authorization: `user_token ${GLPI_USER_TOKEN}`,
-      "App-Token": GLPI_APP_TOKEN,
-    },
-  });
-
-  const data = await response.json();
-
-  if (!data.session_token) {
-    throw new Error("Impossible de créer une session GLPI");
-  }
-
-  return data.session_token;
-}
-
-function findPcByIdOrToken(value) {
-  return pcs.find((p) => p.id === value || p.token === value);
-}
-
-async function createTicketInGlpiAndSave(ticketData) {
-  const { pc_id, email, type_panne, custom_panne, description } = ticketData;
-
-  const pc = pcs.find((p) => p.id === pc_id);
-
-  if (!pc) {
-    throw new Error("PC introuvable");
-  }
-
-  const panneFinale = type_panne === "Autre" ? custom_panne : type_panne;
-
-  const glpiTicket = {
-    input: {
-      name: `Panne PC ${pc_id} - ${panneFinale}`,
-      content: `
-Email utilisateur : ${email}
-PC ID : ${pc_id}
-Salle : ${pc.salle}
-Poste : ${pc.poste}
-Type de panne : ${type_panne}
-${type_panne === "Autre" ? `Panne précisée : ${custom_panne}` : ""}
-Description : ${description || "Aucune description"}
-      `,
-      type: 1,
-    },
-  };
-
-  const sessionToken = await initGlpiSession();
-
-  const response = await fetch(`${GLPI_URL}/Ticket`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Session-Token": sessionToken,
-      "App-Token": GLPI_APP_TOKEN,
-    },
-    body: JSON.stringify(glpiTicket),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(JSON.stringify(data));
-  }
-
-  db.prepare(`
-    INSERT INTO tickets (
-      pc_id,
-      email,
-      type_panne,
-      custom_panne,
-      description
-    )
-    VALUES (?, ?, ?, ?, ?)
-  `).run(pc_id, email, type_panne, custom_panne, description);
-
-  await fetch(`${GLPI_URL}/killSession`, {
-    method: "GET",
-    headers: {
-      "Session-Token": sessionToken,
-      "App-Token": GLPI_APP_TOKEN,
-    },
-  });
-
-  return data;
 }
 
 app.get("/", (req, res) => {
@@ -156,9 +118,17 @@ app.get("/api/pcs/:id", (req, res) => {
 });
 
 app.post("/api/tickets", async (req, res) => {
-  const { pc_id, email, type_panne, custom_panne, description } = req.body;
-  const deviceFingerprint = getDeviceFingerprint(req);
+  const {
+    nom,
+    prenom,
+    pc_id,
+    email,
+    type_panne,
+    custom_panne,
+    description,
+  } = req.body;
 
+  const deviceFingerprint = getDeviceFingerprint(req);
   const pc = findPcByIdOrToken(pc_id);
 
   if (!pc) {
@@ -173,46 +143,6 @@ app.post("/api/tickets", async (req, res) => {
     DELETE FROM pending_tickets
     WHERE expires_at < datetime('now')
   `).run();
-
-  const verifiedUser = db.prepare(`
-    SELECT *
-    FROM verified_users
-    WHERE email = ?
-    AND device_fingerprint = ?
-  `).get(email, deviceFingerprint);
-
-  if (!verifiedUser) {
-    const token = crypto.randomBytes(32).toString("hex");
-
-    db.prepare(`
-      INSERT INTO pending_tickets (
-        token,
-        pc_id,
-        email,
-        type_panne,
-        custom_panne,
-        description,
-        device_fingerprint,
-        expires_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '+30 minutes'))
-    `).run(
-      token,
-      realPcId,
-      email,
-      type_panne,
-      custom_panne,
-      description,
-      deviceFingerprint
-    );
-
-    await sendValidationEmail(email, token);
-
-    return res.status(202).json({
-      message:
-        "Un email de validation vous a été envoyé. Veuillez valider cet appareil dans les 30 minutes.",
-    });
-  }
 
   db.prepare(`
     DELETE FROM tickets
@@ -234,26 +164,68 @@ app.post("/api/tickets", async (req, res) => {
     });
   }
 
-  try {
-    const data = await createTicketInGlpiAndSave({
-      pc_id: realPcId,
+  const verifiedUser = db.prepare(`
+    SELECT *
+    FROM verified_users
+    WHERE email = ?
+    AND device_fingerprint = ?
+  `).get(email, deviceFingerprint);
+
+  const ticketData = {
+    nom,
+    prenom,
+    pc_id: realPcId,
+    email,
+    type_panne,
+    custom_panne,
+    description,
+  };
+
+  if (!verifiedUser) {
+    const token = crypto.randomBytes(32).toString("hex");
+
+    db.prepare(`
+      INSERT INTO pending_tickets (
+        token,
+        nom,
+        prenom,
+        pc_id,
+        email,
+        type_panne,
+        custom_panne,
+        description,
+        device_fingerprint,
+        expires_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+30 minutes'))
+    `).run(
+      token,
+      nom,
+      prenom,
+      realPcId,
       email,
       type_panne,
       custom_panne,
       description,
-    });
+      deviceFingerprint
+    );
 
-    res.status(201).json({
-      message: "Ticket créé avec succès dans GLPI",
-      glpi: data,
-    });
-  } catch (error) {
-    console.error("Erreur création ticket GLPI :", error);
+    await sendValidationEmail(email, token);
 
-    res.status(500).json({
-      message: "Erreur lors de l'envoi du ticket vers GLPI.",
+    return res.status(202).json({
+      message:
+        "Un email de validation vous a été envoyé. Veuillez valider cet appareil dans les 30 minutes.",
     });
   }
+
+  saveTicketLocal(ticketData);
+
+  const aladinUrl = buildAladinUrl(ticketData);
+
+  res.status(201).json({
+    message: "Signalement validé. Redirection vers le formulaire ALADIN.",
+    redirectUrl: aladinUrl,
+  });
 });
 
 app.get("/api/verify-email/:token", async (req, res) => {
@@ -278,28 +250,26 @@ app.get("/api/verify-email/:token", async (req, res) => {
     VALUES (?, ?)
   `).run(pendingTicket.email, pendingTicket.device_fingerprint);
 
-  try {
-    await createTicketInGlpiAndSave({
-      pc_id: pendingTicket.pc_id,
-      email: pendingTicket.email,
-      type_panne: pendingTicket.type_panne,
-      custom_panne: pendingTicket.custom_panne,
-      description: pendingTicket.description,
-    });
+  const ticketData = {
+    nom: pendingTicket.nom,
+    prenom: pendingTicket.prenom,
+    pc_id: pendingTicket.pc_id,
+    email: pendingTicket.email,
+    type_panne: pendingTicket.type_panne,
+    custom_panne: pendingTicket.custom_panne,
+    description: pendingTicket.description,
+  };
 
-    db.prepare(`
-      DELETE FROM pending_tickets
-      WHERE token = ?
-    `).run(token);
+  saveTicketLocal(ticketData);
 
-    res.send("Email et appareil validés avec succès. Votre ticket a été créé dans GLPI.");
-  } catch (error) {
-    console.error("Erreur après validation email :", error);
+  db.prepare(`
+    DELETE FROM pending_tickets
+    WHERE token = ?
+  `).run(token);
 
-    res.send(
-      "Email validé, mais une erreur est survenue lors de la création du ticket dans GLPI."
-    );
-  }
+  const aladinUrl = buildAladinUrl(ticketData);
+
+  res.redirect(aladinUrl);
 });
 
 app.listen(3001, "0.0.0.0", () => {

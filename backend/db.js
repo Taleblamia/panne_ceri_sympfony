@@ -5,6 +5,8 @@ const db = new Database("database.db");
 db.prepare(`
   CREATE TABLE IF NOT EXISTS tickets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT,
+    prenom TEXT,
     pc_id TEXT,
     email TEXT,
     type_panne TEXT,
@@ -28,6 +30,8 @@ db.prepare(`
   CREATE TABLE IF NOT EXISTS pending_tickets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     token TEXT UNIQUE,
+    nom TEXT,
+    prenom TEXT,
     pc_id TEXT,
     email TEXT,
     type_panne TEXT,
@@ -41,14 +45,42 @@ db.prepare(`
 
 try {
   db.prepare(`
-    ALTER TABLE verified_users
-    ADD COLUMN device_fingerprint TEXT
+    ALTER TABLE pending_tickets
+    ADD COLUMN nom TEXT
   `).run();
 } catch (error) {}
 
 try {
   db.prepare(`
     ALTER TABLE pending_tickets
+    ADD COLUMN prenom TEXT
+  `).run();
+} catch (error) {}
+
+try {
+  db.prepare(`
+    ALTER TABLE pending_tickets
+    ADD COLUMN device_fingerprint TEXT
+  `).run();
+} catch (error) {}
+
+try {
+  db.prepare(`
+    ALTER TABLE tickets
+    ADD COLUMN nom TEXT
+  `).run();
+} catch (error) {}
+
+try {
+  db.prepare(`
+    ALTER TABLE tickets
+    ADD COLUMN prenom TEXT
+  `).run();
+} catch (error) {}
+
+try {
+  db.prepare(`
+    ALTER TABLE verified_users
     ADD COLUMN device_fingerprint TEXT
   `).run();
 } catch (error) {}
