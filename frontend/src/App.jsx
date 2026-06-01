@@ -13,8 +13,8 @@ import "./App.css";
 
 import { Html5Qrcode } from "html5-qrcode";
 
-const API_URL = "http://10.188.74.8:3001";
-const FRONT_URL = "http://10.188.74.8:5173";
+const API_URL = import.meta.env.VITE_API_URL;
+const FRONT_URL = import.meta.env.VITE_FRONTEND_URL;
 
 function ReportPage() {
   const { id } = useParams();
@@ -30,7 +30,6 @@ function ReportPage() {
   const [customPanne, setCustomPanne] = useState("");
   const [description, setDescription] = useState("");
 
-  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     fetch(`${API_URL}/api/pannes`)
@@ -65,7 +64,7 @@ function ReportPage() {
       return;
     }
 
-    setPreview(true);
+    handleSend();
   };
 
   const handleSend = async () => {
@@ -101,7 +100,6 @@ function ReportPage() {
     setTypePanne("");
     setCustomPanne("");
     setDescription("");
-    setPreview(false);
   };
 
   const handleDownloadPDF = () => {
@@ -130,6 +128,14 @@ function ReportPage() {
     doc.save("ticket-panne.pdf");
   };
 
+  const isFormValid =
+    nom.trim() &&
+    prenom.trim() &&
+    email.trim() &&
+    typePanne &&
+    (typePanne !== "Autre" || customPanne.trim())
+  ;
+
   return (
     <div className="report-page">
       <div className="report-card">
@@ -149,7 +155,7 @@ function ReportPage() {
         )}
 
         {pc ? (
-          !preview ? (
+          
             <form onSubmit={handleValidate}>
               <label>
                 Nom <span>*</span>
@@ -235,64 +241,14 @@ function ReportPage() {
                 onChange={(e) => setDescription(e.target.value)}
               ></textarea>
 
-              <button type="submit" className="primary-btn">
+              <button type="submit"
+                className="primary-btn"
+                disabled={!isFormValid}
+              >
                 Continuer
               </button>
             </form>
-          ) : (
-            <div className="preview-card">
-              <h2>Prévisualisation du ticket</h2>
-
-              <p>
-                <strong>Nom :</strong> {nom}
-              </p>
-              <p>
-                <strong>Prénom :</strong> {prenom}
-              </p>
-              <p>
-                <strong>Salle :</strong> {pc?.salle}
-              </p>
-              <p>
-                <strong>Poste :</strong> {pc?.poste}
-              </p>
-              <p>
-                <strong>Service Tag :</strong> {pc?.service_tag}
-              </p>
-              <p>
-                <strong>Email :</strong> {email}
-              </p>
-              <p>
-                <strong>Type de panne :</strong> {typePanne}
-              </p>
-
-              {typePanne === "Autre" && (
-                <p>
-                  <strong>Panne précisée :</strong> {customPanne}
-                </p>
-              )}
-
-              <p>
-                <strong>Description :</strong>{" "}
-                {description || "Aucune description"}
-              </p>
-
-              <p>
-                <strong>Date :</strong> {new Date().toLocaleString()}
-              </p>
-
-              <button className="primary-btn" onClick={handleSend}>
-                Valider et ouvrir ALADIN
-              </button>
-
-              <button className="secondary-btn" onClick={() => setPreview(false)}>
-                Modifier
-              </button>
-
-              <button className="secondary-btn" onClick={handleDownloadPDF}>
-                Télécharger PDF
-              </button>
-            </div>
-          )
+          
         ) : null}
       </div>
     </div>

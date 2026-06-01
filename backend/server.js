@@ -10,8 +10,8 @@ require("dotenv").config();
 
 const app = express();
 
-const BACKEND_URL = "http://10.188.74.8:3001";
-const ALADIN_URL = "https://www.appigs.univ-avignon.fr/extranet/interv_ext.html";
+const BACKEND_URL = process.env.BACKEND_URL;
+const ALADIN_URL = process.env.ALADIN_URL;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -37,36 +37,48 @@ function getPanneFinale(type_panne, custom_panne) {
   return type_panne === "Autre" ? custom_panne : type_panne;
 }
 
+// Fonction pour nettoyer les textes en supprimant les accents et les caractères spéciaux
+function cleanText(text) {
+  return (text || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’]/g, "'")
+    .replace(/[“”]/g, '"');
+}
+
+
 function buildAladinUrl(ticketData) {
+  // Nettoyer les données pour éviter les problèmes d'encodage dans l'URL
   const { nom, prenom, email, pc_id, type_panne, custom_panne, description } =
     ticketData;
 
-  const pc = pcs.find((p) => p.id === pc_id);
-  const panneFinale = getPanneFinale(type_panne, custom_panne);
+  const pc = pcs.find((p) => p.id === pc_id); // Récupérer les infos du PC pour la description
 
-  const titre = `Panne PC ${pc_id} - ${panneFinale}`;
+  const panneFinale = cleanText( // Nettoyer le type de panne pour le titre et la description
+    type_panne === "Autre" ? custom_panne : type_panne
+  );
+
+  const titre = cleanText(`Panne PC ${pc_id} - ${panneFinale}`); // Titre du ticket pour ALADIN
 
   const descriptionAladin =
-  `Signalement de panne informatique. ` +
-  `Salle : ${pc.salle}. ` +
-  `Poste : ${pc.poste}. ` +
-  `PC ID : ${pc_id}. ` +
-  `Type de panne : ${panneFinale}. ` +
-  `${type_panne === "Autre" ? `Panne precisee : ${custom_panne}. ` : ""}` +
-  `Description : ${description || "Aucune description"}. ` +
-  `Merci de ne pas prendre en compte cette demande s'il s'agit d'un test.`;
+    `Salle ${pc?.salle || "Non renseignee"}                                                                                                        ` +
+    `Poste ${pc?.poste || "Non renseigne"}                                                                                                         ` +
+    `Panne : ${panneFinale}                                                                ` +
+    `Description : ${cleanText(description) || "Aucune description"}`
+  ;
 
-  return (
-    `${ALADIN_URL}?inst=1` +
-    `&nom=${encodeURIComponent(nom)}` +
-    `&prenom=${encodeURIComponent(prenom)}` +
-    `&mel=${encodeURIComponent(email)}` +
-    `&tit=${encodeURIComponent(titre)}` +
-    `&pb=${encodeURIComponent(descriptionAladin)}`
-  );
+  const params = new URLSearchParams(); // Construire les paramètres de l'URL pour ALADIN
+  params.set("inst", "1");
+  params.set("nom", cleanText(nom));
+  params.set("prenom", cleanText(prenom));
+  params.set("mel", email);
+  params.set("tit", titre);
+  params.set("pb", descriptionAladin);
+
+  return `${ALADIN_URL}?${params.toString()}`; // URL finale pour rediriger vers ALADIN avec les données du ticket
 }
 
-function saveTicketLocal(ticketData) {
+function saveTicketLocal(ticketData) { // Enregistrer le ticket dans la base de données locale
   const { pc_id, email, type_panne, custom_panne, description } = ticketData;
 
   db.prepare(`
@@ -81,7 +93,7 @@ function saveTicketLocal(ticketData) {
   `).run(pc_id, email, type_panne, custom_panne, description);
 }
 
-async function sendValidationEmail(email, token) {
+async function sendValidationEmail(email, token) { // Envoyer un email de validation à l'utilisateur avec un lien contenant le token
   const validationLink = `${BACKEND_URL}/api/verify-email/${token}`;
 
   await transporter.sendMail({
@@ -96,15 +108,17 @@ async function sendValidationEmail(email, token) {
     `,
   });
 }
-
+// Routes API
 app.get("/", (req, res) => {
   res.send("API Ticket Panne CERI fonctionne");
 });
 
+// Route pour récupérer la liste des types de pannes
 app.get("/api/pannes", (req, res) => {
   res.json(pannes);
 });
 
+// Route pour récupérer les infos d'un PC à partir de son ID ou token
 app.get("/api/pcs/:id", (req, res) => {
   const pc = findPcByIdOrToken(req.params.id);
 
@@ -117,6 +131,7 @@ app.get("/api/pcs/:id", (req, res) => {
   res.json(pc);
 });
 
+// Route pour créer un ticket de panne
 app.post("/api/tickets", async (req, res) => {
   const {
     nom,
@@ -149,6 +164,7 @@ app.post("/api/tickets", async (req, res) => {
     WHERE created_at < datetime('now', '-24 hours')
   `).run();
 
+  // Vérifier s'il existe déjà un ticket similaire pour ce PC
   const existingTicket = db.prepare(`
     SELECT *
     FROM tickets
