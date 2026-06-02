@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 // useParams recupere l'id dans l'URL
 import { Routes, Route, useParams, useNavigate } from "react-router-dom";
-import jsPDF from "jspdf";
 import { QRCodeCanvas } from "qrcode.react";
 
 import { FaDesktop } from "react-icons/fa";
@@ -23,9 +22,8 @@ function ReportPage() {
   const [pc, setPc] = useState(null);
   const [pcError, setPcError] = useState("");
 
-  const [nom, setNom] = useState("");
-  const [prenom, setPrenom] = useState("");
-  const [email, setEmail] = useState("");
+  const [userType, setUserType] = useState("etudiant");
+  const [emailPrefix, setEmailPrefix] = useState("");
   const [typePanne, setTypePanne] = useState("");
   const [customPanne, setCustomPanne] = useState("");
   const [description, setDescription] = useState("");
@@ -55,19 +53,35 @@ function ReportPage() {
 
   const handleValidate = (e) => {
     e.preventDefault();
-
-    const emailRegex =
-      /^[a-zA-Z0-9._%+-]+@(univ-avignon\.fr|alumni\.univ-avignon\.fr)$/;
-
-    if (!emailRegex.test(email)) {
-      alert("Veuillez utiliser une adresse email universitaire");
-      return;
-    }
-
+    const email =
+      emailPrefix +
+      (userType === "etudiant"
+        ? "@alumni.univ-avignon.fr"
+        : "@univ-avignon.fr");
     handleSend();
   };
 
+  function getIdentityFromEmail(email) {
+    const username = email.split("@")[0]; // Récupère la partie avant le @
+    const parts = username.split("."); // Sépare le prénom et le nom en utilisant le point comme séparateur
+
+    const prenom = parts[0] || ""; // Le prénom est la première partie de l'email
+    const nom = parts.slice(1).join(" ") || ""; // Le nom  est le reste de l'email après le prénom
+
+    return {
+      prenom,
+      nom,
+    };
+  }
+
   const handleSend = async () => {
+    const email =
+      emailPrefix +
+      (userType === "etudiant"
+        ? "@alumni.univ-avignon.fr"
+        : "@univ-avignon.fr");
+    const { nom, prenom } = getIdentityFromEmail(email);
+
     const ticket = {
       nom,
       prenom,
@@ -94,44 +108,14 @@ function ReportPage() {
       return;
     }
 
-    setNom("");
-    setPrenom("");
-    setEmail("");
+    setEmailPrefix("");
     setTypePanne("");
     setCustomPanne("");
     setDescription("");
   };
 
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-
-    doc.setFontSize(18);
-    doc.text("Ticket de panne - CERI", 20, 20);
-
-    doc.setFontSize(12);
-    doc.text(`Nom : ${nom}`, 20, 40);
-    doc.text(`Prénom : ${prenom}`, 20, 50);
-    doc.text(`Salle : ${pc?.salle}`, 20, 60);
-    doc.text(`Poste : ${pc?.poste}`, 20, 70);
-    doc.text(`Email : ${email}`, 20, 80);
-    doc.text(`Type de panne : ${typePanne}`, 20, 90);
-
-    if (typePanne === "Autre") {
-      doc.text(`Panne précisée : ${customPanne}`, 20, 100);
-      doc.text(`Description : ${description || "Aucune description"}`, 20, 110);
-      doc.text(`Date : ${new Date().toLocaleString()}`, 20, 120);
-    } else {
-      doc.text(`Description : ${description || "Aucune description"}`, 20, 100);
-      doc.text(`Date : ${new Date().toLocaleString()}`, 20, 110);
-    }
-
-    doc.save("ticket-panne.pdf");
-  };
-
   const isFormValid =
-    nom.trim() &&
-    prenom.trim() &&
-    email.trim() &&
+    emailPrefix.trim() &&
     typePanne &&
     (typePanne !== "Autre" || customPanne.trim())
   ;
@@ -158,43 +142,50 @@ function ReportPage() {
           
             <form onSubmit={handleValidate}>
               <label>
-                Nom <span>*</span>
+                Type d'utilisateur <span>*</span>
               </label>
 
-              <input
-                type="text"
-                placeholder="Votre nom"
-                value={nom}
-                onChange={(e) => setNom(e.target.value)}
-                required
-              />
+              <div className="user-type-box">
+              <label>
+                <input
+                  type="radio"
+                  value="etudiant"
+                  checked={userType === "etudiant"}
+                  onChange={(e) => setUserType(e.target.value)}
+                />
+                Étudiant
+              </label>
 
               <label>
-                Prénom <span>*</span>
+                <input
+                  type="radio"
+                  value="Professeur"
+                  checked={userType === "Professeur"}
+                  onChange={(e) => setUserType(e.target.value)}
+                />
+                Professeur
               </label>
-
-              <input
-                type="text"
-                placeholder="Votre prénom"
-                value={prenom}
-                onChange={(e) => setPrenom(e.target.value)}
-                required
-              />
+            </div>
 
               <label>
-                Votre email universitaire <span>*</span>
+                Adresse email universitaire <span>*</span>
               </label>
 
-              <input
-                type="email"
-                placeholder="Votre email universitaire"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                pattern="^[a-zA-Z0-9._%+-]+@(univ-avignon\.fr|alumni\.univ-avignon\.fr)$"
-                required
-              />
+              <div className="email-box">
+                <input
+                  type="text"
+                  placeholder="prenom.nom"
+                  value={emailPrefix}
+                  onChange={(e) => setEmailPrefix(e.target.value)}
+                  required
+                />
 
-              <small>Seuls les emails universitaires sont acceptés.</small>
+                <span>
+                  {userType === "etudiant"
+                    ? "@alumni.univ-avignon.fr"
+                    : "@univ-avignon.fr"}
+                </span>
+              </div>
 
               <label>
                 Type de panne <span>*</span>
