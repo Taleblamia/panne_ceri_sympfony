@@ -346,3 +346,35 @@ body {
   font-weight: bold;
   cursor: pointer;
 }
+
+.mail-icon {
+  width: 110px;
+  height: 110px;
+  margin: 25px auto;
+  border-radius: 50%;
+  background: #eef5ff;
+  font-size: 55px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirmation-text {
+  font-size: 15px;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+
+.success-box {
+  background: #eef8ee;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.delay-text {
+  color: #003b95;
+  font-weight: 600;
+  margin-top: 10px;
+}
