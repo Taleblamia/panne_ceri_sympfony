@@ -30,11 +30,11 @@ function ReportPage() {
 
 
   useEffect(() => {
-    fetch(`${API_URL}/api/pannes`)
+    fetch(`${API_URL}/pannes`)
       .then((res) => res.json())
       .then((data) => setPannes(data));
 
-    fetch(`${API_URL}/api/pcs/${id}`)
+    fetch(`${API_URL}/pcs/${id}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error("PC introuvable");
@@ -92,7 +92,7 @@ function ReportPage() {
       description,
     };
 
-    const response = await fetch(`${API_URL}/api/tickets`, {
+    const response = await fetch(`${API_URL}/tickets`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -259,7 +259,7 @@ function HomePage() {
 
     const code = pcCode.toLowerCase();
 
-    const response = await fetch(`${API_URL}/api/pcs/${code}`);
+    const response = await fetch(`${API_URL}/pcs/${code}`);
 
     if (!response.ok) {
       alert("PC introuvable. Veuillez vérifier le code du poste.");
