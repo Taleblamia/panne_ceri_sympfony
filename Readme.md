@@ -4,6 +4,14 @@ Application web de gestion des tickets de panne pour les salles informatiques du
 
 ---
 
+## desscription du probleme 
+Le problème, c'est que beaucoup d'étudiants ne prennent pas le temps de signaler les pannes sur les postes informatiques. 
+Pour faire un signalement, il faut passer par plusieurs étapes et remplir plusieurs informations. 
+Du coup, certaines pannes ne sont jamais déclarées.
+
+L'objectif de ce projet est donc de rendre le signalement plus simple et plus rapide grâce à une application dédiée. 
+L'utilisateur scanne un QR Code, remplit un petit formulaire et accède directement à un ticket prérempli.
+
 # Technologies utilisées
 
 ## Frontend
