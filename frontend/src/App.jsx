@@ -15,6 +15,9 @@ import {
 import "./App.css";
 import { Html5Qrcode } from "html5-qrcode";
 
+const API_URL = import.meta.env.VITE_API_URL;
+const FRONT_URL = import.meta.env.VITE_FRONTEND_URL;
+
 function ReportPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -33,11 +36,11 @@ function ReportPage() {
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
-    fetch("http://10.120.2.212:3001/api/pannes")
+    fetch(`${API_URL}/pannes`)
       .then((res) => res.json())
       .then((data) => setPannes(data));
 
-    fetch(`http://10.120.2.212:3001/api/pcs/${id}`)
+    fetch(`${API_URL}/pcs/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error("PC introuvable");
         return res.json();
@@ -88,7 +91,7 @@ function ReportPage() {
       description,
     };
 
-    const response = await fetch("http://10.120.2.212:3001/api/tickets", {
+    const response = await fetch(`${API_URL}/tickets`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
