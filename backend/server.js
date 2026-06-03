@@ -13,6 +13,8 @@ const app = express();
 const GLPI_URL = process.env.GLPI_URL;
 const GLPI_USER_TOKEN = process.env.GLPI_USER_TOKEN;
 const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN;
+const BACKEND_URL = process.env.BACKEND_URL;
+
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -28,7 +30,7 @@ function getDeviceFingerprint(req) {
 }
 
 async function sendValidationEmail(email, token) {
-  const validationLink = `http://10.120.2.212:3001/api/verify-email/${token}`;
+  const validationLink = `${BACKEND_URL}/api/verify-email/${token}`;
 
   await transporter.sendMail({
     from: `"Ticket Panne CERI" <${process.env.MAIL_USER}>`,

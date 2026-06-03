@@ -195,3 +195,144 @@ body {
   margin-top: 14px;
   cursor: pointer;
 }
+
+.user-type-box {
+  display: flex;
+  gap: 25px;
+  margin-bottom: 15px;
+}
+
+.user-type-box label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.email-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.email-box input {
+  flex: 1;
+}
+
+.email-box span {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+.secondary-btn.full-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.confirmation-card {
+  text-align: center;
+}
+
+.success-icon {
+  width: 90px;
+  height: 90px;
+  margin: 30px auto;
+  border-radius: 50%;
+  background: #28a745;
+  color: white;
+  font-size: 60px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-box {
+  background: #eaf7ea;
+  padding: 18px;
+  border-radius: 10px;
+  margin: 25px 0;
+  line-height: 1.6;
+}
+
+.primary-btn,
+.secondary-btn {
+  cursor: pointer;
+}
+
+
+.preview-card h2 {
+  text-align: center;
+  color: #002b8f;
+  margin-bottom: 24px;
+}
+
+.preview-info-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #eef5ff;
+  color: #003399;
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.ticket-details-card {
+  background: #ffffff;
+  border: 1px solid #e1e6ef;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.ticket-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e8ecf3;
+  text-align: left;
+}
+
+.ticket-row:last-child {
+  border-bottom: none;
+}
+
+.ticket-row svg {
+  color: #002b8f;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.ticket-row strong {
+  display: block;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.ticket-row p {
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.secondary-btn.full-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
