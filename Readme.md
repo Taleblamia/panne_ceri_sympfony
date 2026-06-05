@@ -44,6 +44,8 @@ node server.js
 git checkout aladin
 ## recuperer les changement qui sont sur la branche aladin 
 git pull origin aladin
+
+
 ## pusher le travail
 git add .
 git commit -m "Description des modifications"

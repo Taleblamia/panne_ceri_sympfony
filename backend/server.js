@@ -14,9 +14,10 @@ const GLPI_URL = process.env.GLPI_URL;
 const GLPI_USER_TOKEN = process.env.GLPI_USER_TOKEN;
 const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN;
 const BACKEND_URL = process.env.BACKEND_URL;
+const PASSWORD = process.env.ADMIN_PASSWORD;
 
 
-const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({ // configuration de Nodemailer pour envoyer des emails via Gmail
   service: "gmail",
   auth: {
     user: process.env.MAIL_USER,
@@ -29,7 +30,7 @@ function getDeviceFingerprint(req) {
   return crypto.createHash("sha256").update(userAgent).digest("hex");
 }
 
-async function sendValidationEmail(email, token) {
+async function sendValidationEmail(email, token) { // envoi d'un email de validation à l'utilisateur avec un lien contenant un token unique
   const validationLink = `${BACKEND_URL}/api/verify-email/${token}`;
 
   await transporter.sendMail({
@@ -69,6 +70,7 @@ async function initGlpiSession() {
 function findPcByIdOrToken(value) {
   return pcs.find((p) => p.id === value || p.token === value);
 }
+
 
 async function createTicketInGlpiAndSave(ticketData) {
   const { pc_id, email, type_panne, custom_panne, description } = ticketData;
@@ -302,6 +304,48 @@ app.get("/api/verify-email/:token", async (req, res) => {
       "Email validé, mais une erreur est survenue lors de la création du ticket dans GLPI."
     );
   }
+});
+
+app.get("/api/admin/salles", (req, res) => {
+  const password = req.headers["x-admin-password"];
+
+  if (password !== PASSWORD) {
+    return res.status(401).json({
+      message: "Accès refusé",
+    });
+  }
+
+  const salles = [...new Set(pcs.map((pc) => pc.salle))].sort();
+
+  res.json(salles);
+});
+
+app.get("/api/admin/tickets", (req, res) => {
+  const password = req.headers["x-admin-password"];
+
+  if (password !== PASSWORD) {
+    return res.status(401).json({
+      message: "Accès refusé",
+    });
+  }
+
+  const tickets = db.prepare(`
+    SELECT *
+    FROM tickets
+    ORDER BY created_at DESC
+  `).all();
+
+  const ticketsAvecPc = tickets.map((ticket) => {
+  const pc = pcs.find((p) => p.id === ticket.pc_id);
+
+  return {
+    ...ticket,
+    salle: pc?.salle || "Inconnue",
+    poste: pc?.poste || "Inconnu",
+  };
+});
+
+res.json(ticketsAvecPc);
 });
 
 app.listen(3001, "0.0.0.0", () => {
