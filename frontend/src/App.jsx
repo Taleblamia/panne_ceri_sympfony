@@ -220,27 +220,33 @@ function ReportPage({ language }) {
       description,
     };
 
-    const response = await fetch(`${API_URL}/tickets`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(ticket),
-    });
+    try {
+      const response = await fetch(`${API_URL}/tickets`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(ticket),
+      });
 
-    const data = await response.json();
+      const data = await response.json().catch(() => ({
+        message: "Erreur serveur : réponse invalide du backend.",
+      }));
 
-    if (response.status === 202) {
-      setWaitingValidation(true);
-      return;
+      if (response.status === 202) {
+        setWaitingValidation(true);
+        return;
+      }
+
+      if (response.status === 201) {
+        setConfirmed(true);
+        return;
+      }
+
+      alert(data.message || "Erreur lors de l'envoi du ticket.");
+    } catch (error) {
+      alert("Impossible de contacter le backend Symfony.");
     }
-
-    if (response.status === 201) {
-      setConfirmed(true);
-      return;
-    }
-
-    alert(data.message);
   };
 
   const handleDownloadPDF = () => {
@@ -570,9 +576,28 @@ function HomePage({ language, changeLanguage, darkMode, setDarkMode }) {
     navigate(`/report/${pc.token}`);
   };
 
+  const getCodeFromQr = (decodedText) => {
+    const value = decodedText.trim();
+
+    try {
+      const url = new URL(value);
+      const parts = url.pathname.split("/").filter(Boolean);
+      const reportIndex = parts.indexOf("report");
+
+      if (reportIndex !== -1 && parts[reportIndex + 1]) {
+        return parts[reportIndex + 1].toLowerCase();
+      }
+
+      return (parts.at(-1) || value).toLowerCase();
+    } catch {
+      return value.toLowerCase();
+    }
+  };
+
   useEffect(() => {
     let html5QrCode;
     let isStarted = false;
+    let hasScanned = false;
 
     if (showScanner) {
       html5QrCode = new Html5Qrcode("reader");
@@ -593,18 +618,34 @@ function HomePage({ language, changeLanguage, darkMode, setDarkMode }) {
                 fps: 10,
                 qrbox: 250,
               },
-              (decodedText) => {
+              async (decodedText) => {
+                if (hasScanned) {
+                  return;
+                }
+
+                hasScanned = true;
+                const code = getCodeFromQr(decodedText);
+
+                const goToReport = async () => {
+                  const response = await fetch(`${API_URL}/pcs/${code}`);
+
+                  if (!response.ok) {
+                    alert(t.pcNotFound);
+                    hasScanned = false;
+                    return;
+                  }
+
+                  const pc = await response.json();
+                  navigate(`/report/${pc.token}`);
+                };
+
                 if (isStarted) {
                   html5QrCode
                     .stop()
-                    .then(() => {
-                      window.location.href = decodedText;
-                    })
-                    .catch(() => {
-                      window.location.href = decodedText;
-                    });
+                    .then(goToReport)
+                    .catch(goToReport);
                 } else {
-                  window.location.href = decodedText;
+                  goToReport();
                 }
               },
               () => {}
@@ -628,7 +669,7 @@ function HomePage({ language, changeLanguage, darkMode, setDarkMode }) {
         html5QrCode.stop().catch(() => {});
       }
     };
-  }, [showScanner, t.noCamera, t.cameraAccess]);
+  }, [showScanner, t.noCamera, t.cameraAccess, t.pcNotFound, navigate]);
 
   return (
     <div className="home-page">

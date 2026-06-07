@@ -1,4 +1,13 @@
 node_modules/
 backend/node_modules/
 .env
+.env.local
+.env.dev
 database.db
+vendor/
+var/
+backend-symfony/.env.local
+backend-symfony/.env.dev
+backend-symfony/vendor/
+backend-symfony/var/
+backend-symfony/database.db

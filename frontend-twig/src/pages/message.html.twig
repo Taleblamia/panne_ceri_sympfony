@@ -1,0 +1,58 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+  <div class="report-page">
+    <div class="report-card confirmation-card">
+      {% if title starts with 'Email envoyé' %}
+        <div class="mail-icon">📧</div>
+        <h2>Email envoyé !</h2>
+        <p class="confirmation-text">{{ message }}</p>
+        {% if email is defined %}
+          <div class="success-box">
+            <strong>{{ email }}</strong>
+          </div>
+        {% endif %}
+        <p class="confirmation-text">Veuillez valider votre adresse email pour finaliser votre demande.</p>
+        <p class="delay-text">Lien valable 30 minutes.</p>
+      {% elseif title starts with 'Ticket envoyé' or title starts with 'Email validé' %}
+        <div class="success-icon">✓</div>
+        <h2>{{ title }}</h2>
+        <p>{{ message }}</p>
+        {% if ticket is defined %}
+          <button class="primary-btn" id="downloadPdfButton" type="button" data-i18n="downloadPdf">Télécharger le PDF</button>
+        {% endif %}
+        <a class="secondary-btn full-btn" href="/">Retour à l'accueil</a>
+      {% else %}
+        <h1>{{ title }}</h1>
+        <p>{{ message }}</p>
+        <a class="secondary-btn full-btn" href="/">Retour à l'accueil</a>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {% if ticket is defined %}
+    <script>
+      document.getElementById("downloadPdfButton").addEventListener("click", () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const ticket = {{ ticket|json_encode|raw }};
+        const problem = ticket.type_panne === "Autre" ? ticket.custom_panne : ticket.type_panne;
+
+        doc.setFontSize(18);
+        doc.text("Ticket de panne - CERI", 20, 20);
+        doc.setFontSize(12);
+        doc.text(`Salle : ${ticket.salle}`, 20, 40);
+        doc.text(`Poste : ${ticket.poste}`, 20, 50);
+        doc.text(`Adresse email universitaire : ${ticket.email}`, 20, 60);
+        doc.text(`Type de panne : ${problem}`, 20, 70);
+        doc.text(`Description : ${ticket.description || "Aucune description"}`, 20, 80);
+        doc.text(`Date : ${new Date().toLocaleString()}`, 20, 90);
+        doc.save("ticket-panne.pdf");
+      });
+    </script>
+  {% endif %}
+{% endblock %}

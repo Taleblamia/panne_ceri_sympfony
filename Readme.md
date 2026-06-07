@@ -2,74 +2,125 @@
 
 Application web de gestion des tickets de panne pour les salles informatiques du CERI.
 
----
+## Description du problème
 
-## desscription du probleme 
-Le problème, c'est que beaucoup d'étudiants ne prennent pas le temps de signaler les pannes sur les postes informatiques. 
-Pour faire un signalement, il faut passer par plusieurs étapes et remplir plusieurs informations. 
-Du coup, certaines pannes ne sont jamais déclarées.
+Beaucoup d'étudiants ne prennent pas le temps de signaler les pannes sur les postes informatiques, car la déclaration classique demande plusieurs étapes et plusieurs informations.
 
-L'objectif de ce projet est donc de rendre le signalement plus simple et plus rapide grâce à une application dédiée. 
-L'utilisateur scanne un QR Code, remplit un petit formulaire et accède directement à un ticket prérempli.
+L'objectif du projet est de simplifier le signalement : l'utilisateur scanne un QR Code, remplit un formulaire court, puis un ticket est créé avec les informations du poste concerné.
 
-# Technologies utilisées
+## Architecture choisie
 
-## Frontend
-- React
-- Vite
-- React Router DOM
-## Lancer le Frontend
+Le projet utilise maintenant l'option **Symfony + Twig** :
 
-```bash
-cd frontend
-npm.cmd run dev
+- **Symfony** pour le backend
+- **Twig** pour les pages HTML
+- **SQLite** pour la base de données locale
+- **GLPI** pour la création des tickets
+- **Docker + MariaDB** pour l'environnement GLPI
 
+L'ancien backend Node.js/Express est conservé dans `backend/` pour comparaison, mais la version à utiliser est dans `backend-symfony/`.
+Le dossier `frontend/` React est conservé, mais la version Symfony/Twig est celle à présenter si Twig est demandé.
 
-## Backend
-- Node.js
-- Express.js
-- CORS
-## Lancer le backend
-```bash
-cd backend
-node server.js
+## Technologies utilisées
 
-## Base de données
+### Frontend Twig
+
+- Twig
+- HTML/CSS
+- Formulaires Symfony
+
+### Backend Symfony
+
+- PHP
+- Symfony
+- Symfony Mailer
+- Symfony HttpClient
 - SQLite
-- better-sqlite3
 
----
+### GLPI
 
-## passer à la branche aladin
-git checkout aladin
-## recuperer les changement qui sont sur la branche aladin 
-git pull origin aladin
+- Docker Compose
+- GLPI
+- MariaDB
 
+## Lancer le backend Symfony
 
-## pusher le travail
-git add .
-git commit -m "Description des modifications"
-git push
+```bash
+cd backend-symfony
+composer install
+cp .env.example .env.local
+```
 
+Modifier ensuite `.env.local` avec les valeurs de GLPI, du mail et du mot de passe admin.
 
-# Structure du projet
+La base SQLite est créée automatiquement dans `backend-symfony/database.db`.
+
+Lancer l'API :
+
+```bash
+symfony server:start --port=8000
+```
+
+ou :
+
+```bash
+php -S 0.0.0.0:8000 -t public
+```
+
+Pages Twig principales :
+
+- `GET /`
+- `GET /report/{id}`
+- `POST /report/{id}`
+- `GET|POST /admin`
+
+## Routes API Symfony
+
+- `GET /api/pannes`
+- `GET /api/pcs/{id}`
+- `POST /api/tickets`
+- `GET /api/verify-email/{token}`
+- `GET /api/admin/salles`
+- `GET /api/admin/tickets`
+
+## Lancer GLPI avec Docker
+
+```bash
+cd glpi_docker
+docker compose up -d
+```
+
+GLPI sera disponible sur :
+
+```txt
+http://localhost:8080
+```
+
+## Structure du projet
 
 ```txt
 ticket-panne-ceri/
-│
-├── backend/
-│   ├── data/
-│   │   ├── pannes.json
-│   │   └── pcs.json
-│   ├── database.db
-│   ├── db.js
-│   ├── server.js
-│   ├── package.json
-│   └── package-lock.json
-│
-└── frontend/
-    ├── src/
-    │   ├── App.jsx
-    │   └── main.jsx
-    ├── package.json
-    └── package-lock.json
+├── backend/              Ancien backend Node.js/Express
+├── backend-symfony/      Version Symfony + Twig
+│   ├── server.php        Backend API
+│   ├── front.php         Routes frontend Twig
+├── frontend-twig/        Frontend Twig
+│   └── src/
+│       ├── App.html.twig
+│       └── pages/
+├── frontend/             Ancien frontend React/Vite conservé
+├── glpi_docker/          GLPI + MariaDB avec Docker
+├── qr_codes/             QR codes générés
+└── genere_qr.js          Script de génération QR code
+```
+
+## Commandes Git utiles
+
+```bash
+git checkout aladin
+git pull origin aladin
+
+git add .
+git commit -m "Migration backend Symfony"
+git push
+```

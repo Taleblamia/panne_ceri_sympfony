@@ -1,0 +1,135 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}Ticket Panne CERI{% endblock %}
+
+{% block body %}
+  <div class="home-page">
+    <div class="home-card">
+      <div class="home-header">
+        <i data-lucide="monitor" class="pc-logo"></i>
+      </div>
+
+      <button class="admin-menu-btn" type="button" id="menuButton">☰</button>
+
+      <div class="home-menu" id="homeMenu" hidden>
+        <button type="button" id="languageButton">🌐 <span data-i18n="language">Passer en anglais</span></button>
+        <button type="button" id="themeButton">🌙 Mode sombre</button>
+        <button type="button" onclick="window.location.href='/admin'">↪ <span data-i18n="admin">Espace admin</span></button>
+      </div>
+
+      <div class="home-content">
+          <h1 data-i18n="title">Ticket Panne CERI</h1>
+
+          <p data-i18n="description">Signalez facilement une panne sur un poste informatique en scannant le QR code du poste concerné.</p>
+
+          <button class="scan-btn" type="button" id="scanButton">
+          <i data-lucide="qr-code" width="22" height="22"></i>
+          <span data-i18n="scan">Scanner un QR code</span>
+        </button>
+
+        <div id="reader" style="margin-top:20px; display:none;"></div>
+
+        <div class="info-box" data-i18n="info">Vous pouvez aussi saisir le code du poste si le QR code ne fonctionne pas.</div>
+
+        <div class="manual-box">
+          <input type="text" id="pcCode" placeholder="Exemple : mc128-24" data-i18n-placeholder="placeholder">
+          <button type="button" id="continueButton" data-i18n="continue">Continuer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script>
+    const menuButton = document.getElementById("menuButton");
+    const homeMenu = document.getElementById("homeMenu");
+    const themeButton = document.getElementById("themeButton");
+    const continueButton = document.getElementById("continueButton");
+    const scanButton = document.getElementById("scanButton");
+    const reader = document.getElementById("reader");
+
+    menuButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      homeMenu.hidden = !homeMenu.hidden;
+    });
+
+    document.addEventListener("click", () => {
+      homeMenu.hidden = true;
+    });
+
+    homeMenu.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    themeButton.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      document.body.classList.toggle("light");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+      themeButton.textContent = document.body.classList.contains("dark") ? "☀️ Mode clair" : "🌙 Mode sombre";
+    });
+
+    document.getElementById("languageButton").addEventListener("click", () => {
+      localStorage.setItem("language", currentLanguage() === "fr" ? "en" : "fr");
+      applyLanguage();
+    });
+
+    continueButton.addEventListener("click", () => {
+      const code = document.getElementById("pcCode").value.trim().toLowerCase();
+
+      if (!code) {
+        alert((i18n[currentLanguage()] || i18n.fr).enterCode);
+        return;
+      }
+
+      window.location.href = "/report/" + encodeURIComponent(code);
+    });
+
+    function getCodeFromQr(decodedText) {
+      const value = decodedText.trim();
+
+      try {
+        const url = new URL(value);
+        const parts = url.pathname.split("/").filter(Boolean);
+        const reportIndex = parts.indexOf("report");
+
+        if (reportIndex !== -1 && parts[reportIndex + 1]) {
+          return parts[reportIndex + 1].toLowerCase();
+        }
+
+        return (parts.at(-1) || value).toLowerCase();
+      } catch {
+        return value.toLowerCase();
+      }
+    }
+
+    scanButton.addEventListener("click", async () => {
+      reader.style.display = "block";
+
+      if (!window.Html5Qrcode) {
+        alert("Scanner QR indisponible.");
+        return;
+      }
+
+      const html5QrCode = new Html5Qrcode("reader");
+      const devices = await Html5Qrcode.getCameras().catch(() => []);
+
+      if (!devices.length) {
+        alert("Aucune caméra détectée.");
+        return;
+      }
+
+      html5QrCode.start(
+        devices[0].id,
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          html5QrCode.stop().finally(() => {
+            window.location.href = "/report/" + encodeURIComponent(getCodeFromQr(decodedText));
+          });
+        },
+        () => {}
+      ).catch(() => alert("Impossible d'accéder à la caméra."));
+    });
+  </script>
+{% endblock %}

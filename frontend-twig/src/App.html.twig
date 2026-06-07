@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Ticket Panne CERI{% endblock %}</title>
+    <link rel="stylesheet" href="/app.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    {% block head %}{% endblock %}
+  </head>
+  <body class="light">
+    {% block body %}{% endblock %}
+    <script>
+      const i18n = {
+        fr: {
+          title: "Ticket Panne CERI",
+          description: "Signalez facilement une panne sur un poste informatique en scannant le QR code du poste concerné.",
+          scan: "Scanner un QR code",
+          info: "Vous pouvez aussi saisir le code du poste si le QR code ne fonctionne pas.",
+          placeholder: "Exemple : mc128-24",
+          continue: "Continuer",
+          language: "Passer en anglais",
+          admin: "Espace admin",
+          enterCode: "Veuillez entrer un code poste",
+          titleReport: "Déclaration de panne",
+          detected: "Poste détecté",
+          room: "Salle",
+          computer: "Poste",
+          userType: "Type d'utilisateur",
+          student: "Étudiant",
+          teacher: "Professeur",
+          email: "Adresse email universitaire",
+          problemType: "Type de panne",
+          selectProblem: "Sélectionnez le type de panne",
+          defineProblem: "Définir la panne",
+          customPlaceholder: "Exemple : Problème de casque",
+          descriptionLabel: "Description (optionnelle)",
+          descriptionPlaceholder: "Décrivez le problème rencontré...",
+          previewTitle: "Aperçu du ticket",
+          previewInfo: "Veuillez vérifier les informations avant d’envoyer votre déclaration.",
+          sendTicket: "Envoyer le ticket",
+          edit: "Modifier",
+          noDescription: "Aucune description",
+          emailAlert: "Veuillez utiliser une adresse email universitaire",
+          emailSentTitle: "Email envoyé !",
+          emailSentText: "Un email de validation a été envoyé à :",
+          validateText: "Veuillez valider votre adresse email pour finaliser votre demande.",
+          delay: "Lien valable 30 minutes.",
+          ticketSentTitle: "Ticket envoyé !",
+          ticketSentText: "Merci, votre déclaration a bien été enregistrée.",
+          backHome: "Retour à l'accueil",
+          downloadPdf: "Télécharger le PDF",
+          adminTitle: "Administration",
+          logout: "Déconnexion",
+          list: "Liste des pannes",
+          stats: "Statistiques",
+          about: "À propos",
+          total: "Total des pannes déclarées",
+          filterRoom: "Filtrer par salle",
+          filterPlaceholder: "Exemple : 128",
+          pc: "PC",
+          problem: "Panne",
+          details: "Voir détails",
+          back: "Retour",
+          detailTitle: "Détail de la panne",
+          totalProblems: "Nombre total de pannes",
+          concernedRooms: "Nombre de salles concernées",
+          problemsByRoom: "Pannes par salle",
+          problemsByType: "Pannes par type",
+          aboutText: "Cette interface admin permet de consulter les pannes déclarées, filtrer par salle et suivre les signalements."
+        },
+        en: {
+          title: "CERI Failure Ticket",
+          description: "Easily report a problem on a computer by scanning the QR code of the workstation.",
+          scan: "Scan a QR code",
+          info: "You can also enter the workstation code if the QR code does not work.",
+          placeholder: "Example: mc128-24",
+          continue: "Continue",
+          language: "Switch to French",
+          admin: "Admin area",
+          enterCode: "Please enter a workstation code",
+          titleReport: "Report a problem",
+          detected: "Detected workstation",
+          room: "Room",
+          computer: "Workstation",
+          userType: "User type",
+          student: "Student",
+          teacher: "Teacher",
+          email: "University email address",
+          problemType: "Problem type",
+          selectProblem: "Select the problem type",
+          defineProblem: "Specify the problem",
+          customPlaceholder: "Example: Headset issue",
+          descriptionLabel: "Description (optional)",
+          descriptionPlaceholder: "Describe the problem...",
+          previewTitle: "Ticket preview",
+          previewInfo: "Please check the information before submitting your report.",
+          sendTicket: "Submit ticket",
+          edit: "Edit",
+          noDescription: "No description",
+          emailAlert: "Please use a university email address",
+          emailSentTitle: "Email sent!",
+          emailSentText: "A validation email has been sent to:",
+          validateText: "Please validate your email address to complete your request.",
+          delay: "Link valid for 30 minutes.",
+          ticketSentTitle: "Ticket sent!",
+          ticketSentText: "Thank you, your report has been saved.",
+          backHome: "Back to home",
+          downloadPdf: "Download PDF",
+          adminTitle: "Administration",
+          logout: "Log out",
+          list: "Ticket list",
+          stats: "Statistics",
+          about: "About",
+          total: "Total reported problems",
+          filterRoom: "Filter by room",
+          filterPlaceholder: "Example: 128",
+          pc: "PC",
+          problem: "Problem",
+          details: "View details",
+          back: "Back",
+          detailTitle: "Problem details",
+          totalProblems: "Total number of problems",
+          concernedRooms: "Number of concerned rooms",
+          problemsByRoom: "Problems by room",
+          problemsByType: "Problems by type",
+          aboutText: "This admin interface lets you view reported problems, filter by room and track reports."
+        }
+      };
+
+      function getCookie(name) {
+        const cookies = document.cookie.split(";");
+
+        for (const cookie of cookies) {
+          const [key, value] = cookie.trim().split("=");
+
+          if (key === name) {
+            return decodeURIComponent(value);
+          }
+        }
+
+        return null;
+      }
+
+      function setCookie(name, value) {
+        document.cookie = `${name}=${encodeURIComponent(value)}; max-age=31536000; path=/`;
+      }
+
+      function currentLanguage() {
+        return localStorage.getItem("language") || "fr";
+      }
+
+      function applyLanguage() {
+        const t = i18n[currentLanguage()] || i18n.fr;
+        document.querySelectorAll("[data-i18n]").forEach((node) => {
+          node.textContent = t[node.dataset.i18n] || node.textContent;
+        });
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+          node.placeholder = t[node.dataset.i18nPlaceholder] || node.placeholder;
+        });
+        document.querySelectorAll("[data-i18n-title]").forEach((node) => {
+          node.title = t[node.dataset.i18nTitle] || node.title;
+        });
+      }
+
+      function initTheme() {
+        const darkMode = localStorage.getItem("darkMode") === "true";
+        document.body.className = darkMode ? "dark" : "light";
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        initTheme();
+        applyLanguage();
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+      });
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

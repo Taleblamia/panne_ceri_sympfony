@@ -1,0 +1,187 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}Administration{% endblock %}
+
+{% block body %}
+  <div class="report-page">
+    <div class="report-card admin-card">
+      <button class="logout-icon" type="button" onclick="window.location.href='/'" data-i18n-title="logout" title="Déconnexion">
+        <i data-lucide="log-out" width="22" height="22"></i>
+      </button>
+
+      <h1 data-i18n="adminTitle">Administration</h1>
+
+      {% if tickets is null %}
+        {% if error %}
+          <p style="color:red;font-weight:bold;text-align:center;">{{ error }}</p>
+        {% endif %}
+
+        <form method="post">
+          <label>Mot de passe</label>
+          <input type="password" name="password" placeholder="Votre mot de passe" required>
+          <button class="primary-btn" type="submit">Entrer</button>
+          <button type="button" class="secondary-btn full-btn" onclick="window.location.href='/'">Retour</button>
+        </form>
+      {% else %}
+        <div class="admin-layout">
+          <div class="admin-topbar">
+            <button type="button" class="active" data-section-button="liste" data-i18n-title="list" title="Liste des pannes">📋</button>
+            <button type="button" data-section-button="stats" data-i18n-title="stats" title="Statistiques">📊</button>
+            <button type="button" data-section-button="about" data-i18n-title="about" title="À propos">ℹ️</button>
+          </div>
+
+          <div class="admin-content" id="sectionListe">
+            <div class="admin-summary"><span data-i18n="total">Total des pannes déclarées</span> : {{ tickets|length }}</div>
+
+            <label data-i18n="filterRoom">Filtrer par salle</label>
+            <input type="text" id="salleFilter" placeholder="Exemple : 128" data-i18n-placeholder="filterPlaceholder">
+
+            <div id="ticketsList"></div>
+          </div>
+
+          <div class="admin-content" id="sectionStats" hidden>
+            <h2 data-i18n="stats">Statistiques</h2>
+
+            <div class="stats-card">
+              <strong data-i18n="totalProblems">Nombre total de pannes</strong> : {{ tickets|length }}
+              <br>
+              <strong data-i18n="concernedRooms">Nombre de salles concernées</strong> : <span id="roomCount"></span>
+            </div>
+
+            <h3 data-i18n="problemsByRoom">Pannes par salle</h3>
+            <div class="chart-card">
+              <canvas id="roomChart"></canvas>
+            </div>
+
+            <h3 data-i18n="problemsByType">Pannes par type</h3>
+            <div class="chart-card">
+              <canvas id="typeChart"></canvas>
+            </div>
+          </div>
+
+          <div class="admin-content" id="sectionAbout" hidden>
+            <h2 data-i18n="about">À propos</h2>
+            <div class="pc-info-card" data-i18n="aboutText">Cette interface admin permet de consulter les pannes déclarées, filtrer par salle et suivre les signalements.</div>
+          </div>
+
+          <div class="admin-content" id="sectionDetail" hidden>
+            <button class="secondary-btn full-btn" type="button" id="backToList" data-i18n="back">Retour</button>
+            <h1 data-i18n="detailTitle">Détail de la panne</h1>
+            <div class="pc-info-card" id="ticketDetail"></div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {% if tickets is not null %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const tickets = {{ tickets|json_encode|raw }};
+      const ticketsList = document.getElementById("ticketsList");
+      const salleFilter = document.getElementById("salleFilter");
+      const sections = {
+        liste: document.getElementById("sectionListe"),
+        stats: document.getElementById("sectionStats"),
+        about: document.getElementById("sectionAbout"),
+        detail: document.getElementById("sectionDetail"),
+      };
+
+      function t(key) {
+        return (i18n[currentLanguage()] || i18n.fr)[key] || key;
+      }
+
+      function problemLabel(ticket) {
+        return ticket.type_panne === "Autre" ? (ticket.custom_panne || "Autre") : ticket.type_panne;
+      }
+
+      function showSection(name) {
+        Object.values(sections).forEach((section) => section.hidden = true);
+        sections[name].hidden = false;
+        document.querySelectorAll("[data-section-button]").forEach((button) => {
+          button.classList.toggle("active", button.dataset.sectionButton === name);
+        });
+      }
+
+      function renderTickets() {
+        const filter = salleFilter.value.trim();
+        const filtered = filter ? tickets.filter((ticket) => String(ticket.salle) === filter) : tickets;
+
+        ticketsList.innerHTML = filtered.map((ticket) => `
+          <div class="pc-info-card">
+            <strong>${t("pc")} :</strong> ${ticket.pc_id}<br>
+            <strong>${t("room")} :</strong> ${ticket.salle}<br>
+            <strong>${t("computer")} :</strong> ${ticket.poste}<br>
+            <strong>${t("email")} :</strong> ${ticket.email}<br>
+            <strong>${t("problem")} :</strong> ${problemLabel(ticket)}<br>
+            <strong>${t("descriptionLabel")} :</strong> ${ticket.description || t("noDescription")}
+            <button class="primary-btn" type="button" data-ticket-id="${ticket.id}">${t("details")}</button>
+          </div>
+        `).join("");
+
+        document.querySelectorAll("[data-ticket-id]").forEach((button) => {
+          button.addEventListener("click", () => showTicketDetail(button.dataset.ticketId));
+        });
+      }
+
+      function showTicketDetail(id) {
+        const ticket = tickets.find((item) => String(item.id) === String(id));
+        if (!ticket) return;
+
+        document.getElementById("ticketDetail").innerHTML = `
+          <strong>${t("pc")} :</strong> ${ticket.pc_id}<br>
+          <strong>${t("room")} :</strong> ${ticket.salle}<br>
+          <strong>${t("computer")} :</strong> ${ticket.poste}<br>
+          <strong>${t("email")} :</strong> ${ticket.email}<br>
+          <strong>${t("problem")} :</strong> ${problemLabel(ticket)}<br>
+          <strong>${t("descriptionLabel")} :</strong> ${ticket.description || t("noDescription")}<br>
+          <strong>Date :</strong> ${ticket.created_at}
+        `;
+        showSection("detail");
+      }
+
+      function groupedBy(keyFn) {
+        return tickets.reduce((acc, ticket) => {
+          const key = keyFn(ticket);
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {});
+      }
+
+      document.querySelectorAll("[data-section-button]").forEach((button) => {
+        button.addEventListener("click", () => showSection(button.dataset.sectionButton));
+      });
+
+      document.getElementById("backToList").addEventListener("click", () => showSection("liste"));
+      salleFilter.addEventListener("input", renderTickets);
+
+      const rooms = groupedBy((ticket) => ticket.salle || "Inconnue");
+      const types = groupedBy(problemLabel);
+      document.getElementById("roomCount").textContent = Object.keys(rooms).length;
+
+      new Chart(document.getElementById("roomChart"), {
+        type: "bar",
+        data: {
+          labels: Object.keys(rooms).map((room) => `${t("room")} ${room}`),
+          datasets: [{ label: "Nombre de pannes", data: Object.values(rooms), backgroundColor: "#003bba", borderRadius: 8 }]
+        }
+      });
+
+      new Chart(document.getElementById("typeChart"), {
+        type: "doughnut",
+        data: {
+          labels: Object.keys(types),
+          datasets: [{ data: Object.values(types), backgroundColor: ["#003bba", "#f97316", "#22c55e", "#ef4444", "#a855f7", "#14b8a6"] }]
+        }
+      });
+
+      renderTickets();
+      applyLanguage();
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    </script>
+  {% endif %}
+{% endblock %}

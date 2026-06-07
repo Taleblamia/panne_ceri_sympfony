@@ -1,0 +1,343 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}Déclaration de panne{% endblock %}
+
+{% block body %}
+  <div class="report-page">
+    <div class="report-card">
+      <div class="mobile-topbar">
+        <button class="back-icon-btn" type="button" onclick="window.location.href='/'" aria-label="Retour">
+          <i data-lucide="chevron-left" width="24" height="24"></i>
+        </button>
+        <h1 data-i18n="titleReport">Déclaration de panne</h1>
+      </div>
+
+      <div class="pc-info-card" id="pcInfo">
+        <p data-i18n="detected">Poste détecté</p>
+        <div><strong data-i18n="room">Salle</strong> : {{ pc.salle }}</div>
+        <div><strong data-i18n="computer">Poste</strong> : {{ pc.poste }}</div>
+      </div>
+
+      <form id="ticketForm">
+        <div id="formStep">
+          <label><span data-i18n="userType">Type d'utilisateur</span></label>
+
+          <div class="user-type-box">
+            <label>
+              <input type="radio" name="user_type" value="etudiant" checked>
+              <span data-i18n="student">Étudiant</span>
+            </label>
+
+            <label>
+              <input type="radio" name="user_type" value="Professeur">
+              <span data-i18n="teacher">Professeur</span>
+            </label>
+          </div>
+
+          <label><span data-i18n="email">Adresse email universitaire</span> <span class="required-star">*</span></label>
+
+          <div class="email-box">
+            <input type="text" name="email_prefix" id="emailPrefix" placeholder="prenom.nom" required>
+            <span id="emailSuffix">@alumni.univ-avignon.fr</span>
+          </div>
+          <p class="field-help">Seuls les emails universitaires sont acceptés.</p>
+
+          <input type="hidden" name="email" id="emailFull">
+
+          <label><span data-i18n="problemType">Type de panne</span> <span class="required-star">*</span></label>
+
+          <select name="type_panne" id="typePanne" required>
+            <option value="" data-i18n="selectProblem">Sélectionnez le type de panne</option>
+            {% for panne in pannes %}
+              <option value="{{ panne }}">{{ panne }}</option>
+            {% endfor %}
+          </select>
+
+          <div id="customPanneBox" hidden>
+            <label><span data-i18n="defineProblem">Définir la panne</span> <span class="required-star">*</span></label>
+            <input type="text" name="custom_panne" id="customPanne" placeholder="Exemple : Problème de casque" data-i18n-placeholder="customPlaceholder">
+          </div>
+
+          <br>
+          <br>
+
+          <label data-i18n="descriptionLabel">Description (optionnelle)</label>
+          <textarea name="description" id="description" maxlength="500" placeholder="Décrivez le problème rencontré..." data-i18n-placeholder="descriptionPlaceholder"></textarea>
+          <p class="char-count"><span id="descriptionCount">0</span>/500</p>
+
+          <button type="button" class="primary-btn" id="continueButton" disabled data-i18n="continue">Continuer</button>
+        </div>
+
+        <div class="preview-card" id="previewStep" hidden>
+          <div class="mobile-topbar">
+            <button class="back-icon-btn" type="button" id="previewBackButton" aria-label="Retour">
+              <i data-lucide="chevron-left" width="24" height="24"></i>
+            </button>
+            <h2 data-i18n="previewTitle">Aperçu du ticket</h2>
+          </div>
+
+          <div class="preview-info-box">
+            <i data-lucide="info" width="22" height="22"></i>
+            <span data-i18n="previewInfo">Veuillez vérifier les informations avant d’envoyer votre déclaration.</span>
+          </div>
+
+          <div class="ticket-details-card">
+            <div class="ticket-row">
+              <i data-lucide="map-pin" width="22" height="22"></i>
+              <div>
+                <strong data-i18n="room">Salle</strong>
+                <p>{{ pc.salle }}</p>
+              </div>
+            </div>
+
+            <div class="ticket-row">
+              <i data-lucide="monitor" width="22" height="22"></i>
+              <div>
+                <strong data-i18n="computer">Poste</strong>
+                <p>{{ pc.poste }}</p>
+              </div>
+            </div>
+
+            <div class="ticket-row">
+              <i data-lucide="mail" width="22" height="22"></i>
+              <div>
+                <strong data-i18n="email">Adresse email universitaire</strong>
+                <p id="previewEmail"></p>
+              </div>
+            </div>
+
+            <div class="ticket-row">
+              <i data-lucide="circle-alert" width="22" height="22"></i>
+              <div>
+                <strong data-i18n="problemType">Type de panne</strong>
+                <p id="previewPanne"></p>
+              </div>
+            </div>
+
+            <div class="ticket-row">
+              <i data-lucide="file-pen-line" width="22" height="22"></i>
+              <div>
+                <strong data-i18n="descriptionLabel">Description (optionnelle)</strong>
+                <p id="previewDescription">Aucune description</p>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="primary-btn" data-i18n="sendTicket">Envoyer le ticket</button>
+          <button type="button" class="secondary-btn full-btn" id="editButton" data-i18n="edit">Modifier</button>
+        </div>
+      </form>
+
+      <div class="confirmation-card" id="waitingValidationStep" hidden>
+        <div class="mail-icon">📧</div>
+        <h2 data-i18n="emailSentTitle">Email envoyé !</h2>
+        <p class="confirmation-text" data-i18n="emailSentText">Un email de validation a été envoyé à :</p>
+        <div class="success-box">
+          <strong id="sentEmail"></strong>
+        </div>
+        <p class="confirmation-text" data-i18n="validateText">Veuillez valider votre adresse email pour finaliser votre demande.</p>
+        <p class="delay-text" data-i18n="delay">Lien valable 30 minutes.</p>
+      </div>
+
+      <div class="confirmation-card" id="confirmedStep" hidden>
+        <div class="success-icon">✓</div>
+        <h2 data-i18n="ticketSentTitle">Ticket envoyé !</h2>
+        <p data-i18n="ticketSentText">Merci, votre déclaration a bien été enregistrée.</p>
+        <button class="primary-btn" type="button" id="downloadPdfButton" data-i18n="downloadPdf">Télécharger le PDF</button>
+        <button class="secondary-btn full-btn" type="button" onclick="window.location.href='/'" data-i18n="backHome">Retour à l'accueil</button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const form = document.getElementById("ticketForm");
+    const formStep = document.getElementById("formStep");
+    const previewStep = document.getElementById("previewStep");
+    const waitingValidationStep = document.getElementById("waitingValidationStep");
+    const confirmedStep = document.getElementById("confirmedStep");
+    const continueButton = document.getElementById("continueButton");
+    const editButton = document.getElementById("editButton");
+    const downloadPdfButton = document.getElementById("downloadPdfButton");
+    const emailPrefix = document.getElementById("emailPrefix");
+    const emailSuffix = document.getElementById("emailSuffix");
+    const emailFull = document.getElementById("emailFull");
+    const typePanne = document.getElementById("typePanne");
+    const customPanne = document.getElementById("customPanne");
+    const customPanneBox = document.getElementById("customPanneBox");
+    const description = document.getElementById("description");
+    const descriptionCount = document.getElementById("descriptionCount");
+    const previewBackButton = document.getElementById("previewBackButton");
+
+    function getUserType() {
+      return document.querySelector("input[name='user_type']:checked").value;
+    }
+
+    function buildEmail() {
+      emailPrefix.value = emailPrefix.value.trim().toLowerCase();
+      return emailPrefix.value + (getUserType() === "etudiant" ? "@alumni.univ-avignon.fr" : "@univ-avignon.fr");
+    }
+
+    function buildTicket() {
+      return {
+        pc_id: "{{ pc.id }}",
+        email: buildEmail(),
+        type_panne: typePanne.value,
+        custom_panne: customPanne.value,
+        description: description.value
+      };
+    }
+
+    function refreshEmailSuffix() {
+      emailSuffix.textContent = getUserType() === "etudiant" ? "@alumni.univ-avignon.fr" : "@univ-avignon.fr";
+    }
+
+    function isValid() {
+      return emailPrefix.value.trim() && typePanne.value && (typePanne.value !== "Autre" || customPanne.value.trim());
+    }
+
+    function refreshValidity() {
+      continueButton.disabled = !isValid();
+      descriptionCount.textContent = String(description.value.length);
+    }
+
+    document.querySelectorAll("input[name='user_type']").forEach((input) => {
+      input.addEventListener("change", () => {
+        refreshEmailSuffix();
+        setCookie("userType", getUserType());
+        refreshValidity();
+      });
+    });
+
+    emailPrefix.addEventListener("input", () => {
+      emailPrefix.value = emailPrefix.value.toLowerCase();
+    });
+
+    [emailPrefix, typePanne, customPanne, description].forEach((field) => {
+      field.addEventListener("input", refreshValidity);
+      field.addEventListener("change", refreshValidity);
+    });
+
+    typePanne.addEventListener("change", () => {
+      customPanneBox.hidden = typePanne.value !== "Autre";
+      customPanne.required = typePanne.value === "Autre";
+      refreshValidity();
+    });
+
+    continueButton.addEventListener("click", async () => {
+      const email = buildEmail();
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@(univ-avignon\.fr|alumni\.univ-avignon\.fr)$/;
+
+      if (!emailRegex.test(email)) {
+        alert((i18n[currentLanguage()] || i18n.fr).emailAlert);
+        return;
+      }
+
+      setCookie("emailPrefix", emailPrefix.value.toLowerCase());
+      setCookie("userType", getUserType());
+
+      const checkResponse = await fetch("/api/tickets/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildTicket())
+      });
+      const checkData = await checkResponse.json().catch(() => ({ message: "Erreur serveur." }));
+
+      if (!checkResponse.ok) {
+        alert(checkData.message || "Erreur lors de la vérification du ticket.");
+        return;
+      }
+
+      emailFull.value = email;
+      document.getElementById("previewEmail").textContent = email;
+      document.getElementById("previewPanne").textContent = typePanne.value === "Autre" ? customPanne.value : typePanne.value;
+      document.getElementById("previewDescription").textContent = description.value || ((i18n[currentLanguage()] || i18n.fr).noDescription);
+      formStep.hidden = true;
+      previewStep.hidden = false;
+    });
+
+    editButton.addEventListener("click", () => {
+      previewStep.hidden = true;
+      formStep.hidden = false;
+    });
+
+    previewBackButton.addEventListener("click", () => {
+      previewStep.hidden = true;
+      formStep.hidden = false;
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      emailFull.value = buildEmail();
+      setCookie("emailPrefix", emailPrefix.value.toLowerCase());
+      setCookie("userType", getUserType());
+
+      const response = await fetch("/api/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildTicket())
+      });
+
+      const data = await response.json().catch(() => ({ message: "Erreur serveur." }));
+
+      if (response.status === 202) {
+        form.hidden = true;
+        document.getElementById("pcInfo").hidden = true;
+        document.getElementById("sentEmail").textContent = buildEmail();
+        waitingValidationStep.hidden = false;
+        applyLanguage();
+        return;
+      }
+
+      if (response.status === 201) {
+        form.hidden = true;
+        document.getElementById("pcInfo").hidden = true;
+        confirmedStep.hidden = false;
+        applyLanguage();
+        return;
+      }
+
+      alert(data.message || "Erreur lors de l'envoi du ticket.");
+    });
+
+    downloadPdfButton.addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const problem = typePanne.value === "Autre" ? customPanne.value : typePanne.value;
+
+      doc.setFontSize(18);
+      doc.text("Ticket de panne - CERI", 20, 20);
+      doc.setFontSize(12);
+      doc.text("Salle : {{ pc.salle }}", 20, 40);
+      doc.text("Poste : {{ pc.poste }}", 20, 50);
+      doc.text(`Adresse email universitaire : ${buildEmail()}`, 20, 60);
+      doc.text(`Type de panne : ${problem}`, 20, 70);
+      doc.text(`Description : ${description.value || "Aucune description"}`, 20, 80);
+      doc.text(`Date : ${new Date().toLocaleString()}`, 20, 90);
+      doc.save("ticket-panne.pdf");
+    });
+
+    const savedEmailPrefix = getCookie("emailPrefix");
+    const savedUserType = getCookie("userType");
+
+    if (savedEmailPrefix) {
+      emailPrefix.value = savedEmailPrefix.toLowerCase();
+    }
+
+    if (savedUserType) {
+      const normalizedUserType = savedUserType.toLowerCase() === "professeur" ? "Professeur" : savedUserType;
+      const savedInput = document.querySelector(`input[name='user_type'][value='${normalizedUserType}']`);
+      if (savedInput) {
+        savedInput.checked = true;
+      }
+    }
+
+    refreshEmailSuffix();
+    refreshValidity();
+    applyLanguage();
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
+{% endblock %}

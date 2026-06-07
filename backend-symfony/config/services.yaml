@@ -1,0 +1,30 @@
+parameters:
+  app.backend_url: '%env(BACKEND_URL)%'
+  app.frontend_url: '%env(FRONTEND_URL)%'
+  app.admin_password: '%env(ADMIN_PASSWORD)%'
+  app.mail_from: '%env(MAIL_FROM)%'
+  app.glpi_url: '%env(GLPI_URL)%'
+  app.glpi_user_token: '%env(GLPI_USER_TOKEN)%'
+  app.glpi_app_token: '%env(GLPI_APP_TOKEN)%'
+
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  App\:
+    resource: '../src/'
+
+  App\Controller\ServerController: ~
+
+  App\Controller\FrontController: ~
+
+  App\Service\Database: ~
+
+  App\Service\PcCatalog: ~
+
+  App\Service\GlpiTicketService:
+    arguments:
+      $glpiUrl: '%app.glpi_url%'
+      $userToken: '%app.glpi_user_token%'
+      $appToken: '%app.glpi_app_token%'
