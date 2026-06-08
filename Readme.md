@@ -50,24 +50,3 @@ git commit -m "Description des modifications"
 git push
 
 
-# Structure du projet
-
-```txt
-ticket-panne-ceri/
-│
-├── backend/
-│   ├── data/
-│   │   ├── pannes.json
-│   │   └── pcs.json
-│   ├── database.db
-│   ├── db.js
-│   ├── server.js
-│   ├── package.json
-│   └── package-lock.json
-│
-└── frontend/
-    ├── src/
-    │   ├── App.jsx
-    │   └── main.jsx
-    ├── package.json
-    └── package-lock.json
