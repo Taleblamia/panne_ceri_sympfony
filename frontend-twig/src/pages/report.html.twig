@@ -11,19 +11,19 @@
         <p class="error-text">{{ pc_error }}</p>
       {% endif %}
 
-      {% if waiting_email %}
-        <div class="confirmation-card">
+      <div class="confirmation-card" id="waitingValidation" {% if not waiting_email %}hidden{% endif %}>
           <div class="mail-icon">📧</div>
           <h2>Email envoyé !</h2>
           <p class="confirmation-text">Un email de validation a été envoyé à :</p>
           <div class="success-box">
-            <strong>{{ waiting_email }}</strong>
+            <strong id="waitingEmail">{{ waiting_email }}</strong>
           </div>
           <p class="confirmation-text">Veuillez valider votre email pour finaliser votre demande.</p>
           <p class="delay-text">Lien valable 30 minutes.</p>
-        </div>
-      {% elseif pc %}
-        <div class="pc-info-card">
+      </div>
+
+      {% if pc %}
+        <div class="pc-info-card" id="pcInfo" {% if waiting_email %}hidden{% endif %}>
           <p>Poste détecté</p>
           <strong>Salle :</strong> {{ pc.salle }}
           <br>
@@ -31,10 +31,10 @@
         </div>
 
         {% if error %}
-          <p class="error-text">{{ error }}</p>
+          <p class="error-text" id="errorText">{{ error }}</p>
         {% endif %}
 
-        <form method="post" id="ticketForm">
+        <form id="ticketForm" {% if waiting_email %}hidden{% endif %}>
           <label>Type d'utilisateur <span>*</span></label>
           <div class="user-type-box">
             <label>
@@ -67,7 +67,7 @@
           </div>
 
           <label>Description (optionnelle)</label>
-          <textarea name="description" placeholder="Décrivez le problème rencontré..."></textarea>
+          <textarea name="description" id="description" placeholder="Décrivez le problème rencontré..."></textarea>
 
           <button type="submit" class="primary-btn" id="submitButton" disabled>Continuer</button>
         </form>
@@ -78,6 +78,7 @@
 
 {% block scripts %}
   <script>
+    const pc = {{ pc ? pc|json_encode|raw : 'null' }};
     const emailPrefix = document.getElementById("emailPrefix");
     const typePanne = document.getElementById("typePanne");
     const customPanne = document.getElementById("customPanne");
@@ -85,12 +86,19 @@
     const submitButton = document.getElementById("submitButton");
     const emailDomain = document.getElementById("emailDomain");
     const userTypeInputs = document.querySelectorAll('input[name="user_type"]');
+    const ticketForm = document.getElementById("ticketForm");
+    const description = document.getElementById("description");
+    const waitingValidation = document.getElementById("waitingValidation");
+    const waitingEmail = document.getElementById("waitingEmail");
+    const pcInfo = document.getElementById("pcInfo");
 
     function selectedUserType() {
       return document.querySelector('input[name="user_type"]:checked')?.value || "etudiant";
     }
 
     function updateDomain() {
+      if (!emailDomain) return;
+
       emailDomain.textContent = selectedUserType() === "Professeur" ? "@univ-avignon.fr" : "@alumni.univ-avignon.fr";
       localStorage.setItem("userType", selectedUserType());
     }
@@ -103,6 +111,41 @@
       customPanne.required = needsCustom;
 
       submitButton.disabled = !emailPrefix.value.trim() || !typePanne.value || (needsCustom && !customPanne.value.trim());
+    }
+
+    function buildEmail() {
+      return (
+        emailPrefix.value +
+        (selectedUserType() === "etudiant"
+          ? "@alumni.univ-avignon.fr"
+          : "@univ-avignon.fr")
+      ).toLowerCase();
+    }
+
+    function getIdentityFromEmail(email) {
+      const username = email.split("@")[0];
+      const parts = username.split(".");
+
+      return {
+        prenom: parts[0] || "",
+        nom: parts.slice(1).join(" ") || "",
+      };
+    }
+
+    function getDeviceId() {
+      let deviceId = localStorage.getItem("ticketPanneDeviceId");
+
+      if (!deviceId) {
+        if (window.crypto && window.crypto.randomUUID) {
+          deviceId = window.crypto.randomUUID();
+        } else {
+          deviceId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+
+        localStorage.setItem("ticketPanneDeviceId", deviceId);
+      }
+
+      return deviceId;
     }
 
     if (emailPrefix) {
@@ -127,6 +170,52 @@
 
     typePanne?.addEventListener("change", updateForm);
     customPanne?.addEventListener("input", updateForm);
+
+    ticketForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const email = buildEmail();
+      localStorage.setItem("emailPrefix", emailPrefix.value.toLowerCase());
+      localStorage.setItem("userType", selectedUserType());
+
+      const identity = getIdentityFromEmail(email);
+      const ticket = {
+        nom: identity.nom,
+        prenom: identity.prenom,
+        pc_id: pc.id,
+        email,
+        type_panne: typePanne.value,
+        custom_panne: customPanne.value,
+        description: description.value,
+      };
+
+      const response = await fetch("/api/tickets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Id": getDeviceId(),
+        },
+        body: JSON.stringify(ticket),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 202) {
+        waitingEmail.textContent = email;
+        waitingValidation.hidden = false;
+        ticketForm.hidden = true;
+        if (pcInfo) pcInfo.hidden = true;
+        return;
+      }
+
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
+      alert(data.message);
+    });
+
     updateDomain();
     updateForm();
   </script>

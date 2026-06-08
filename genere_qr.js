@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const QRCode = require("qrcode");
 const sharp = require("sharp");
 
-const pcsPath = path.join(__dirname, "backend-symfony/data/pcs.json");
+const pcsPath = path.join(__dirname, "backend/data/pcs.json");
 let pcs = require(pcsPath);
 
 const FRONT_URL = "http://10.120.2.212:8000"; // URL du frontend pour générer les liens de signalement

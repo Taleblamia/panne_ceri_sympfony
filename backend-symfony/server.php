@@ -156,6 +156,12 @@ class Server extends AbstractController
 
     private function deviceFingerprint(Request $request): string
     {
+        $deviceId = trim((string) $request->headers->get('X-Device-Id', ''));
+
+        if ($deviceId !== '') {
+            return hash('sha256', $deviceId);
+        }
+
         return hash('sha256', $request->headers->get('User-Agent', ''));
     }
 }

@@ -59,29 +59,29 @@
       window.location.href = `/report/${pc.token}`;
     });
 
-    scanButton.addEventListener("click", async () => {
+    scanButton.addEventListener("click", () => {
       reader.hidden = false;
 
-      if (!window.Html5Qrcode) {
-        alert("Le scanner QR n'a pas pu être chargé.");
-        return;
-      }
-
       const scanner = new Html5Qrcode("reader");
-      const cameras = await Html5Qrcode.getCameras();
 
-      if (!cameras.length) {
-        alert("Aucune caméra trouvée.");
-        return;
-      }
-
-      scanner.start(
-        cameras[0].id,
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          window.location.href = decodedText;
-        }
-      );
+      Html5Qrcode.getCameras()
+        .then((cameras) => {
+          if (cameras && cameras.length) {
+            scanner.start(
+              cameras[0].id,
+              { fps: 10, qrbox: 250 },
+              (decodedText) => {
+                window.location.href = decodedText;
+              },
+              (errorMessage) => {
+                console.log(errorMessage);
+              }
+            );
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     });
   </script>
 {% endblock %}
