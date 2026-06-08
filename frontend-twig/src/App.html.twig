@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ticket Panne CERI{% endblock %}</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    {% block body %}{% endblock %}
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

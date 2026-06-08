@@ -1,0 +1,87 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}Ticket Panne CERI{% endblock %}
+
+{% block body %}
+  <div class="home-page">
+    <div class="home-card">
+      <div class="home-header">
+        <i class="pc-logo" data-lucide="monitor" width="82" height="82"></i>
+      </div>
+
+      <div class="home-content">
+        <h1>Ticket Panne CERI</h1>
+
+        <p>Signalez facilement une panne sur un poste informatique en scannant le QR code du poste concerné.</p>
+
+        <button class="scan-btn" type="button" id="scanButton">
+          <i data-lucide="qr-code" width="22" height="22"></i>
+          Scanner un QR code
+        </button>
+
+        <div id="reader" class="reader" hidden></div>
+
+        <div class="info-box">Vous pouvez aussi saisir le code du poste si le QR code ne fonctionne pas.</div>
+
+        <div class="manual-box">
+          <input type="text" id="pcCode" placeholder="Exemple : mc128-24">
+          <button type="button" id="continueButton">Continuer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script>
+    const pcInput = document.getElementById("pcCode");
+    const continueButton = document.getElementById("continueButton");
+    const scanButton = document.getElementById("scanButton");
+    const reader = document.getElementById("reader");
+
+    continueButton.addEventListener("click", async () => {
+      const code = pcInput.value.trim().toLowerCase();
+
+      if (!code) {
+        alert("Veuillez entrer un code poste");
+        return;
+      }
+
+      const response = await fetch(`/api/pcs/${encodeURIComponent(code)}`);
+
+      if (!response.ok) {
+        alert("PC introuvable. Veuillez vérifier le code du poste.");
+        return;
+      }
+
+      const pc = await response.json();
+      window.location.href = `/report/${pc.token}`;
+    });
+
+    scanButton.addEventListener("click", async () => {
+      reader.hidden = false;
+
+      if (!window.Html5Qrcode) {
+        alert("Le scanner QR n'a pas pu être chargé.");
+        return;
+      }
+
+      const scanner = new Html5Qrcode("reader");
+      const cameras = await Html5Qrcode.getCameras();
+
+      if (!cameras.length) {
+        alert("Aucune caméra trouvée.");
+        return;
+      }
+
+      scanner.start(
+        cameras[0].id,
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          window.location.href = decodedText;
+        }
+      );
+    });
+  </script>
+{% endblock %}

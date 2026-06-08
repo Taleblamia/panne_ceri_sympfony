@@ -1,0 +1,7 @@
+api_routes:
+  resource: ../server.php
+  type: attribute
+
+front_routes:
+  resource: ../front.php
+  type: attribute

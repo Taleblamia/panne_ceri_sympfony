@@ -1,0 +1,20 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}QR Code PC {{ id }}{% endblock %}
+
+{% block body %}
+  <div class="qr-page">
+    <div class="report-card">
+      <h1>QR Code PC {{ id }}</h1>
+      <div id="qrCode"></div>
+      <p>{{ url }}</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script>
+    QRCode.toCanvas(document.getElementById("qrCode"), "{{ url|e('js') }}", { width: 250 });
+  </script>
+{% endblock %}

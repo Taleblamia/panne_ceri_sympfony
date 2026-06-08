@@ -1,0 +1,133 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}Déclaration de panne{% endblock %}
+
+{% block body %}
+  <div class="report-page">
+    <div class="report-card">
+      <h1>Déclaration de panne</h1>
+
+      {% if pc_error %}
+        <p class="error-text">{{ pc_error }}</p>
+      {% endif %}
+
+      {% if waiting_email %}
+        <div class="confirmation-card">
+          <div class="mail-icon">📧</div>
+          <h2>Email envoyé !</h2>
+          <p class="confirmation-text">Un email de validation a été envoyé à :</p>
+          <div class="success-box">
+            <strong>{{ waiting_email }}</strong>
+          </div>
+          <p class="confirmation-text">Veuillez valider votre email pour finaliser votre demande.</p>
+          <p class="delay-text">Lien valable 30 minutes.</p>
+        </div>
+      {% elseif pc %}
+        <div class="pc-info-card">
+          <p>Poste détecté</p>
+          <strong>Salle :</strong> {{ pc.salle }}
+          <br>
+          <strong>Poste :</strong> {{ pc.poste }}
+        </div>
+
+        {% if error %}
+          <p class="error-text">{{ error }}</p>
+        {% endif %}
+
+        <form method="post" id="ticketForm">
+          <label>Type d'utilisateur <span>*</span></label>
+          <div class="user-type-box">
+            <label>
+              <input type="radio" name="user_type" value="etudiant" checked>
+              Étudiant
+            </label>
+            <label>
+              <input type="radio" name="user_type" value="Professeur">
+              Professeur
+            </label>
+          </div>
+
+          <label>Adresse email universitaire <span>*</span></label>
+          <div class="email-box">
+            <input type="text" name="email_prefix" id="emailPrefix" placeholder="prenom.nom" required>
+            <span id="emailDomain">@alumni.univ-avignon.fr</span>
+          </div>
+
+          <label>Type de panne <span>*</span></label>
+          <select name="type_panne" id="typePanne" required>
+            <option value="">Sélectionnez le type de panne</option>
+            {% for panne in pannes %}
+              <option value="{{ panne }}">{{ panne }}</option>
+            {% endfor %}
+          </select>
+
+          <div id="customPanneBox" hidden>
+            <label>Définir la panne <span>*</span></label>
+            <input type="text" name="custom_panne" id="customPanne" placeholder="Exemple : Problème de casque">
+          </div>
+
+          <label>Description (optionnelle)</label>
+          <textarea name="description" placeholder="Décrivez le problème rencontré..."></textarea>
+
+          <button type="submit" class="primary-btn" id="submitButton" disabled>Continuer</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const emailPrefix = document.getElementById("emailPrefix");
+    const typePanne = document.getElementById("typePanne");
+    const customPanne = document.getElementById("customPanne");
+    const customPanneBox = document.getElementById("customPanneBox");
+    const submitButton = document.getElementById("submitButton");
+    const emailDomain = document.getElementById("emailDomain");
+    const userTypeInputs = document.querySelectorAll('input[name="user_type"]');
+
+    function selectedUserType() {
+      return document.querySelector('input[name="user_type"]:checked')?.value || "etudiant";
+    }
+
+    function updateDomain() {
+      emailDomain.textContent = selectedUserType() === "Professeur" ? "@univ-avignon.fr" : "@alumni.univ-avignon.fr";
+      localStorage.setItem("userType", selectedUserType());
+    }
+
+    function updateForm() {
+      if (!submitButton) return;
+
+      const needsCustom = typePanne.value === "Autre";
+      customPanneBox.hidden = !needsCustom;
+      customPanne.required = needsCustom;
+
+      submitButton.disabled = !emailPrefix.value.trim() || !typePanne.value || (needsCustom && !customPanne.value.trim());
+    }
+
+    if (emailPrefix) {
+      emailPrefix.value = localStorage.getItem("emailPrefix") || "";
+      emailPrefix.addEventListener("input", () => {
+        emailPrefix.value = emailPrefix.value.toLowerCase();
+        localStorage.setItem("emailPrefix", emailPrefix.value);
+        updateForm();
+      });
+    }
+
+    const savedUserType = localStorage.getItem("userType");
+    if (savedUserType) {
+      const savedInput = document.querySelector(`input[name="user_type"][value="${savedUserType}"]`);
+      if (savedInput) savedInput.checked = true;
+    }
+
+    userTypeInputs.forEach((input) => input.addEventListener("change", () => {
+      updateDomain();
+      updateForm();
+    }));
+
+    typePanne?.addEventListener("change", updateForm);
+    customPanne?.addEventListener("input", updateForm);
+    updateDomain();
+    updateForm();
+  </script>
+{% endblock %}

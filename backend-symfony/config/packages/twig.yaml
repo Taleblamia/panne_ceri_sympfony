@@ -1,0 +1,10 @@
+twig:
+  file_name_pattern: '*.twig'
+  paths:
+    '%kernel.project_dir%/../frontend-twig': ''
+  globals:
+    frontend_url: '%env(FRONTEND_URL)%'
+
+when@test:
+  twig:
+    strict_variables: true

@@ -1,0 +1,5 @@
+/.env.local
+/database.db
+/var/
+/vendor/
+/public/uploads/
