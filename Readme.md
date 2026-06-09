@@ -1,89 +1,216 @@
-# Ticket Panne CERI
+# Ticket Panne CERI - version GLPI
 
-Application web de gestion des tickets de panne pour les salles informatiques du CERI.
+Application web de signalement de pannes pour les salles informatiques du CERI.
+
+Cette branche `main` correspond à la version **GLPI** : l'application permet de scanner le QR code d'un poste, de déclarer une panne rapidement, puis de créer automatiquement un ticket dans GLPI avec l'API REST.
+
+---
 
 ## Description du problème
 
-Beaucoup d'étudiants ne prennent pas le temps de signaler les pannes sur les postes informatiques, car la déclaration classique demande plusieurs étapes et plusieurs informations.
+Au CERI, les pannes informatiques peuvent déjà être signalées, mais le parcours classique demande plusieurs étapes : accéder au bon service, s'identifier, retrouver les informations du poste et remplir le formulaire.
 
-L'objectif du projet est de simplifier le signalement : l'utilisateur scanne un QR Code, remplit un formulaire court, puis un ticket est créé avec les informations du poste concerné.
+L'objectif de cette application est de simplifier ce signalement :
 
-## Architecture choisie
+- l'utilisateur scanne le QR code du poste ;
+- le poste est reconnu automatiquement ;
+- l'utilisateur remplit un formulaire court ;
+- l'application vérifie l'email et l'appareil ;
+- un ticket est créé automatiquement dans GLPI.
 
-Le projet utilise maintenant l'option **Symfony + Twig** :
-
-- **Symfony** pour le backend
-- **Twig** pour les pages HTML
-- **SQLite** pour la base de données locale
-- **GLPI** pour la création des tickets
-- **Docker + MariaDB** pour l'environnement GLPI
-
-L'ancien backend Node.js/Express est conservé dans `backend/` pour comparaison, mais la version à utiliser est dans `backend-symfony/`.
-Le dossier `frontend/` React est conservé, mais la version Symfony/Twig est celle à présenter si Twig est demandé.
+---
 
 ## Technologies utilisées
 
-### Frontend Twig
-
-- Twig
-- HTML/CSS
-- Formulaires Symfony
-
-### Backend Symfony
+### Backend
 
 - PHP
 - Symfony
+- SQLite
 - Symfony Mailer
 - Symfony HttpClient
-- SQLite
+- API REST GLPI
+
+### Frontend
+
+- Twig
+- HTML / CSS / JavaScript
+- Lucide Icons
+- jsPDF pour les exports PDF
+- PWA simple avec `manifest.json` et `sw.js`
 
 ### GLPI
 
-- Docker Compose
 - GLPI
-- MariaDB
+- API REST GLPI
+- Docker + MariaDB pour l'environnement de test local
 
-## Lancer le backend Symfony
+---
+
+## Fonctionnalités
+
+- Scan d'un QR code.
+- Saisie manuelle du code poste si le QR code ne fonctionne pas.
+- Formulaire de déclaration de panne.
+- Email universitaire en minuscule avec domaine automatique.
+- Validation du couple email + appareil.
+- Création automatique d'un ticket dans GLPI.
+- Ajout de plusieurs images jointes, maximum 3.
+- Visualisation des images dans l'espace admin et dans `Mes signalements`.
+- Blocage des doublons : même panne sur le même poste pendant 24h.
+- Limite de signalements :
+  - maximum 2 signalements par utilisateur et par jour ;
+  - maximum 1 signalement par utilisateur sur le même poste et par jour.
+- Page `Mes signalements`.
+- Espace administration protégé par mot de passe.
+- Recherche admin par email, poste, salle ou type de panne.
+- Filtre admin par période.
+- Statistiques admin.
+- Export CSV et PDF.
+- Mode sombre.
+- Changement de langue français / anglais.
+- Application installable en PWA selon les conditions du navigateur.
+
+---
+
+## Fonctionnement avec GLPI
+
+La création d'un ticket GLPI se fait avec l'API REST de GLPI.
+
+Le service `backend-symfony/glpi.php` :
+
+1. ouvre une session GLPI avec `initSession` ;
+2. récupère un `Session-Token` ;
+3. envoie une requête `POST` vers `/Ticket` ;
+4. transmet le titre et le contenu du ticket ;
+5. ferme la session avec `killSession`.
+
+Les informations nécessaires sont configurées dans `.env.local` :
+
+- `GLPI_URL`
+- `GLPI_USER_TOKEN`
+- `GLPI_APP_TOKEN`
+
+Les images jointes sont conservées dans l'application locale. Le ticket GLPI indique qu'il y a des images jointes dans l'application.
+
+---
+
+## Données locales
+
+Le projet utilise une base SQLite locale :
+
+```text
+backend-symfony/database.db
+```
+
+Elle sert à stocker :
+
+- les tickets créés localement ;
+- les validations email + appareil ;
+- les tickets en attente de validation ;
+- les chemins des images jointes.
+
+Les fichiers JSON suivants servent de catalogue :
+
+- `backend-symfony/data/pcs.json` : liste des postes et tokens QR code ;
+- `backend-symfony/data/pannes.json` : liste des types de panne.
+
+---
+
+## Fichiers importants
+
+- `backend-symfony/server.php` : routes API, validation email, création des tickets.
+- `backend-symfony/front.php` : routes des pages Twig.
+- `backend-symfony/glpi.php` : communication avec l'API REST GLPI.
+- `backend-symfony/db.php` : gestion de la base SQLite.
+- `backend-symfony/catalog.php` : lecture des postes, salles et types de panne.
+- `frontend-twig/src/App.html.twig` : base HTML des pages.
+- `frontend-twig/src/pages/home.html.twig` : page d'accueil.
+- `frontend-twig/src/pages/report.html.twig` : formulaire et aperçu du ticket.
+- `frontend-twig/src/pages/message.html.twig` : pages de confirmation ou d'erreur.
+- `frontend-twig/src/pages/my_reports.html.twig` : page Mes signalements.
+- `frontend-twig/src/pages/admin.html.twig` : espace administration.
+- `backend-symfony/public/app.css` : style de l'application.
+- `backend-symfony/public/manifest.json` : configuration PWA.
+- `backend-symfony/public/sw.js` : service worker PWA.
+- `genere_qr.js` : génération des QR codes.
+
+---
+
+## Configuration
+
+Créer ou modifier le fichier :
+
+```bash
+backend-symfony/.env.local
+```
+
+Exemple de configuration :
+
+```env
+APP_ENV=dev
+APP_SECRET=change_me
+
+BACKEND_URL=http://10.120.2.212:8001
+FRONTEND_URL=http://10.120.2.212:8001
+ADMIN_PASSWORD=admin123
+
+MAILER_DSN=smtp://user:password@smtp.gmail.com:587
+MAIL_FROM=adresse@gmail.com
+
+GLPI_URL=http://localhost:8080/apirest.php
+GLPI_USER_TOKEN=change_me
+GLPI_APP_TOKEN=change_me
+```
+
+`BACKEND_URL` et `FRONTEND_URL` doivent utiliser l'adresse IP du PC si l'application est testée depuis un téléphone sur le même réseau.
+
+---
+
+## Installation
+
+Depuis le dossier Symfony :
 
 ```bash
 cd backend-symfony
 composer install
-cp .env.example .env.local
+composer dump-autoload
 ```
 
-Modifier ensuite `.env.local` avec les valeurs de GLPI, du mail et du mot de passe admin.
+---
 
-La base SQLite est créée automatiquement dans `backend-symfony/database.db`.
+## Exécution de l'application
 
-Lancer l'API :
+Lancer le serveur Symfony :
 
 ```bash
-symfony server:start --port=8000
+cd backend-symfony
+php -S 0.0.0.0:8001 -t public
 ```
 
-ou :
+Puis ouvrir :
 
-```bash
-php -S 0.0.0.0:8000 -t public
+```text
+http://localhost:8001
 ```
 
-Pages Twig principales :
+ou depuis un autre appareil sur le même réseau :
 
-- `GET /`
-- `GET /report/{id}`
-- `POST /report/{id}`
-- `GET|POST /admin`
+```text
+http://ADRESSE_IP_DU_PC:8001
+```
 
-## Routes API Symfony
+Exemple :
 
-- `GET /api/pannes`
-- `GET /api/pcs/{id}`
-- `POST /api/tickets`
-- `GET /api/verify-email/{token}`
-- `GET /api/admin/salles`
-- `GET /api/admin/tickets`
+```text
+http://10.120.2.212:8001
+```
 
-## Lancer GLPI avec Docker
+---
+
+## Lancer GLPI en local
+
+Depuis le dossier GLPI :
 
 ```bash
 cd glpi_docker
@@ -92,35 +219,92 @@ docker compose up -d
 
 GLPI sera disponible sur :
 
-```txt
+```text
 http://localhost:8080
 ```
 
+---
+
+## Routes principales
+
+Pages Twig :
+
+- `GET /`
+- `GET /report/{id}`
+- `POST /report/{id}`
+- `GET /mes-signalements`
+- `GET|POST /admin`
+
+Routes API :
+
+- `GET /api/pannes`
+- `GET /api/pcs/{id}`
+- `POST /api/tickets`
+- `POST /api/tickets/check`
+- `GET /api/verify-email/{token}`
+- `GET /api/admin/salles`
+- `GET /api/admin/tickets`
+
+---
+
+## Génération des QR codes
+
+Depuis la racine du projet :
+
+```bash
+node genere_qr.js
+```
+
+Les QR codes sont générés dans :
+
+```text
+qr_codes/
+```
+
+---
+
 ## Structure du projet
 
-```txt
+```text
 ticket-panne-ceri/
-├── backend/              Ancien backend Node.js/Express
-├── backend-symfony/      Version Symfony + Twig
-│   ├── server.php        Backend API
-│   ├── front.php         Routes frontend Twig
-├── frontend-twig/        Frontend Twig
+├── backend/              Ancienne version Node.js conservée
+├── backend-symfony/      Backend Symfony et fichiers publics
+│   ├── server.php        Routes API
+│   ├── front.php         Routes des pages Twig
+│   ├── glpi.php          Service GLPI
+│   ├── db.php            Base SQLite
+│   ├── catalog.php       Catalogue postes/pannes
+│   └── public/
+├── frontend-twig/        Pages Twig
 │   └── src/
 │       ├── App.html.twig
 │       └── pages/
-├── frontend/             Ancien frontend React/Vite conservé
-├── glpi_docker/          GLPI + MariaDB avec Docker
+├── frontend/             Ancienne version React conservée
+├── glpi_docker/          GLPI + MariaDB pour test local
 ├── qr_codes/             QR codes générés
 └── genere_qr.js          Script de génération QR code
 ```
 
+---
+
 ## Commandes Git utiles
 
-```bash
-git checkout aladin
-git pull origin aladin
+Passer sur la branche principale :
 
+```bash
+git checkout main
+```
+
+Récupérer les changements :
+
+```bash
+git pull origin main
+```
+
+Pousser le travail :
+
+```bash
 git add .
-git commit -m "Migration backend Symfony"
+git commit -m "Description des modifications"
 git push
 ```
