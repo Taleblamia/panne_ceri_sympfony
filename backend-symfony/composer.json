@@ -17,13 +17,6 @@
     "twig/twig": "^3.27"
   },
   "autoload": {
-    "classmap": [
-      "server.php",
-      "front.php",
-      "db.php",
-      "glpi.php",
-      "catalog.php"
-    ],
     "psr-4": {
       "App\\": "src/"
     }

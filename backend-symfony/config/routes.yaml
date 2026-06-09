@@ -1,7 +1,3 @@
-backend:
-    resource: ../server.php
-    type: attribute
-
-frontend_twig:
-    resource: ../front.php
+controllers:
+    resource: ../src/Controller/
     type: attribute

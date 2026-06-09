@@ -77,7 +77,7 @@ L'objectif de cette application est de simplifier ce signalement :
 
 La création d'un ticket GLPI se fait avec l'API REST de GLPI.
 
-Le service `backend-symfony/glpi.php` :
+Le service `backend-symfony/src/Service/GlpiTicketService.php` :
 
 1. ouvre une session GLPI avec `initSession` ;
 2. récupère un `Session-Token` ;
@@ -119,11 +119,11 @@ Les fichiers JSON suivants servent de catalogue :
 
 ## Fichiers importants
 
-- `backend-symfony/server.php` : routes API, validation email, création des tickets.
-- `backend-symfony/front.php` : routes des pages Twig.
-- `backend-symfony/glpi.php` : communication avec l'API REST GLPI.
-- `backend-symfony/db.php` : gestion de la base SQLite.
-- `backend-symfony/catalog.php` : lecture des postes, salles et types de panne.
+- `backend-symfony/src/Controller/ServerController.php` : routes API, validation email, création des tickets.
+- `backend-symfony/src/Controller/FrontController.php` : routes des pages Twig.
+- `backend-symfony/src/Service/GlpiTicketService.php` : communication avec l'API REST GLPI.
+- `backend-symfony/src/Service/Database.php` : gestion de la base SQLite.
+- `backend-symfony/src/Service/PcCatalog.php` : lecture des postes, salles et types de panne.
 - `frontend-twig/src/App.html.twig` : base HTML des pages.
 - `frontend-twig/src/pages/home.html.twig` : page d'accueil.
 - `frontend-twig/src/pages/report.html.twig` : formulaire et aperçu du ticket.
@@ -174,7 +174,6 @@ Depuis le dossier Symfony :
 ```bash
 cd backend-symfony
 composer install
-composer dump-autoload
 ```
 
 ---
@@ -269,11 +268,9 @@ qr_codes/
 ticket-panne-ceri/
 ├── backend/              Ancienne version Node.js conservée
 ├── backend-symfony/      Backend Symfony et fichiers publics
-│   ├── server.php        Routes API
-│   ├── front.php         Routes des pages Twig
-│   ├── glpi.php          Service GLPI
-│   ├── db.php            Base SQLite
-│   ├── catalog.php       Catalogue postes/pannes
+│   ├── src/
+│   │   ├── Controller/   Routes API et pages Twig
+│   │   └── Service/      Base SQLite, GLPI et catalogue
 │   └── public/
 ├── frontend-twig/        Pages Twig
 │   └── src/
