@@ -24,12 +24,14 @@ class Server extends AbstractController
     #[Route('/api/pannes', methods: ['GET'])]
     public function pannes(): JsonResponse
     {
+        // Liste des types de panne affiches dans le formulaire.
         return $this->json($this->catalog->pannes());
     }
 
     #[Route('/api/pcs/{id}', methods: ['GET'])]
     public function pc(string $id): JsonResponse
     {
+        // Recherche d'un poste depuis son code lisible ou son token QR code.
         $pc = $this->catalog->findPcByIdOrToken($id);
 
         if (!$pc) {
@@ -42,6 +44,7 @@ class Server extends AbstractController
     #[Route('/api/tickets', methods: ['POST'])]
     public function createTicket(Request $request, MailerInterface $mailer): JsonResponse
     {
+        // Point d'entree appele par le formulaire Twig en JavaScript.
         $data = json_decode((string) $request->getContent(), true) ?: [];
         $result = $this->prepareTicket($data, $request, $mailer);
 
@@ -51,6 +54,10 @@ class Server extends AbstractController
 
         if ($result['status'] === 'duplicate') {
             return $this->json(['message' => 'Cette panne a déjà été signalée sur ce poste.'], 409);
+        }
+
+        if ($result['status'] === 'limit') {
+            return $this->json(['message' => $result['message']], 409);
         }
 
         if ($result['status'] === 'validation_sent') {
@@ -68,6 +75,7 @@ class Server extends AbstractController
     #[Route('/api/verify-email/{token}', methods: ['GET'])]
     public function verifyEmail(string $token): Response
     {
+        // Validation du lien envoye par mail avant la redirection vers ALADIN.
         $pendingTicket = $this->database->findPendingTicket($token);
 
         if (!$pendingTicket) {
@@ -84,6 +92,20 @@ class Server extends AbstractController
             'description' => $pendingTicket['description'],
         ];
 
+        $limitMessage = $this->dailyLimitMessage($ticket['email'], $ticket['pc_id']);
+
+        if ($limitMessage) {
+            $this->database->deletePendingTicket($token);
+
+            return new Response($limitMessage);
+        }
+
+        if ($this->database->findDuplicateTicket($ticket['pc_id'], $ticket['type_panne'], $ticket['custom_panne'])) {
+            $this->database->deletePendingTicket($token);
+
+            return new Response('Cette panne a déjà été signalée sur ce poste.');
+        }
+
         $this->database->addVerifiedUser($pendingTicket['email'], $pendingTicket['device_fingerprint']);
         $this->database->addTicket($ticket);
         $this->database->deletePendingTicket($token);
@@ -93,6 +115,7 @@ class Server extends AbstractController
 
     public function prepareTicket(array $data, Request $request, MailerInterface $mailer): array
     {
+        // Nettoie les validations expirees avant de traiter une nouvelle demande.
         $this->database->cleanup();
 
         $pc = $this->catalog->findPcByIdOrToken((string) ($data['pc_id'] ?? ''));
@@ -115,10 +138,20 @@ class Server extends AbstractController
             return ['status' => 'duplicate'];
         }
 
+        $limitMessage = $this->dailyLimitMessage($ticket['email'], $ticket['pc_id']);
+
+        if ($limitMessage) {
+            return [
+                'status' => 'limit',
+                'message' => $limitMessage,
+            ];
+        }
+
         $fingerprint = $this->deviceFingerprint($request);
         $verifiedUser = $this->database->findVerifiedUser($ticket['email'], $fingerprint);
 
         if (!$verifiedUser) {
+            // Premier signalement avec cet email sur cet appareil : validation obligatoire.
             $token = bin2hex(random_bytes(32));
             $this->database->addPendingTicket($token, $ticket, $fingerprint);
             $this->sendValidationEmail($mailer, $ticket['email'], $token);
@@ -134,8 +167,22 @@ class Server extends AbstractController
         ];
     }
 
+    private function dailyLimitMessage(string $email, string $pcId): ?string
+    {
+        if ($this->database->hasTicketTodayByEmailAndPc($email, $pcId)) {
+            return 'Vous avez déjà déclaré une panne sur ce poste aujourd’hui.';
+        }
+
+        if ($this->database->countTicketsTodayByEmail($email) >= 2) {
+            return 'Vous avez atteint la limite de 2 signalements par jour.';
+        }
+
+        return null;
+    }
+
     private function sendValidationEmail(MailerInterface $mailer, string $emailAddress, string $token): void
     {
+        // Mail envoye pour verifier le couple email + appareil.
         $backendUrl = rtrim($_ENV['BACKEND_URL'] ?? $_SERVER['BACKEND_URL'] ?? 'http://localhost:8000', '/');
         $from = $_ENV['MAIL_FROM'] ?? $_SERVER['MAIL_FROM'] ?? 'noreply@example.com';
         $validationLink = $backendUrl . '/api/verify-email/' . $token;
@@ -156,6 +203,7 @@ class Server extends AbstractController
 
     private function deviceFingerprint(Request $request): string
     {
+        // L'appareil est reconnu grace a un identifiant stocke dans le navigateur.
         $deviceId = trim((string) $request->headers->get('X-Device-Id', ''));
 
         if ($deviceId !== '') {

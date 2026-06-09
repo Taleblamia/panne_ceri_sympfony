@@ -10,6 +10,7 @@ class Database
 
     public function __construct()
     {
+        // Base SQLite locale utilisee par l'application Symfony.
         $this->pdo = new PDO('sqlite:' . __DIR__ . '/database.db');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->migrate();
@@ -22,18 +23,20 @@ class Database
 
     public function cleanup(): void
     {
+        // On supprime seulement les demandes de validation expirees.
         $this->pdo->exec("DELETE FROM pending_tickets WHERE expires_at < datetime('now')");
-        $this->pdo->exec("DELETE FROM tickets WHERE created_at < datetime('now', '-24 hours')");
     }
 
     public function findDuplicateTicket(string $pcId, string $typePanne, ?string $customPanne): ?array
     {
+        // Evite de declarer la meme panne sur le meme poste pendant 24h.
         $statement = $this->pdo->prepare("
             SELECT *
             FROM tickets
             WHERE pc_id = ?
               AND type_panne = ?
               AND IFNULL(custom_panne, '') = IFNULL(?, '')
+              AND created_at >= datetime('now', '-24 hours')
             LIMIT 1
         ");
         $statement->execute([$pcId, $typePanne, $customPanne]);
@@ -41,8 +44,52 @@ class Database
         return $statement->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    public function hasTicketTodayByEmailAndPc(string $email, string $pcId): bool
+    {
+        // Un utilisateur ne peut declarer qu'une panne par jour sur le meme poste.
+        $statement = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM tickets
+            WHERE lower(email) = lower(?)
+              AND pc_id = ?
+              AND date(created_at, 'localtime') = date('now', 'localtime')
+        ");
+        $statement->execute([$email, $pcId]);
+
+        return (int) $statement->fetchColumn() > 0;
+    }
+
+    public function countTicketsTodayByEmail(string $email): int
+    {
+        // Limite globale : maximum deux signalements par utilisateur et par jour.
+        $statement = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM tickets
+            WHERE lower(email) = lower(?)
+              AND date(created_at, 'localtime') = date('now', 'localtime')
+        ");
+        $statement->execute([$email]);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    public function findTicketsByEmail(string $email): array
+    {
+        // Liste les signalements locaux d'un utilisateur, du plus recent au plus ancien.
+        $statement = $this->pdo->prepare("
+            SELECT *
+            FROM tickets
+            WHERE lower(email) = lower(?)
+            ORDER BY created_at DESC
+        ");
+        $statement->execute([$email]);
+
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function findVerifiedUser(string $email, string $fingerprint): ?array
     {
+        // La validation est liee au couple email + appareil.
         $statement = $this->pdo->prepare("
             SELECT *
             FROM verified_users
@@ -57,6 +104,7 @@ class Database
 
     public function addPendingTicket(string $token, array $ticket, string $fingerprint): void
     {
+        // Ticket temporaire en attente de validation email.
         $statement = $this->pdo->prepare("
             INSERT INTO pending_tickets (
                 token, nom, prenom, pc_id, email, type_panne, custom_panne, description, device_fingerprint, expires_at
@@ -98,6 +146,7 @@ class Database
 
     public function addVerifiedUser(string $email, string $fingerprint): void
     {
+        // Une fois valide, ce couple email + appareil ne redemande plus de validation.
         $statement = $this->pdo->prepare("
             INSERT OR IGNORE INTO verified_users (email, device_fingerprint)
             VALUES (?, ?)
@@ -107,6 +156,7 @@ class Database
 
     public function addTicket(array $ticket): void
     {
+        // Historique local des signalements envoyes vers ALADIN.
         $statement = $this->pdo->prepare("
             INSERT INTO tickets (nom, prenom, pc_id, email, type_panne, custom_panne, description)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -124,6 +174,7 @@ class Database
 
     private function migrate(): void
     {
+        // Creation automatique des tables si la base n'existe pas encore.
         $this->pdo->exec("
             CREATE TABLE IF NOT EXISTS tickets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

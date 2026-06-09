@@ -7,7 +7,7 @@ const sharp = require("sharp");
 const pcsPath = path.join(__dirname, "backend/data/pcs.json");
 let pcs = require(pcsPath);
 
-const FRONT_URL = "http://10.120.2.212:8000"; // URL du frontend pour générer les liens de signalement
+const FRONT_URL = "http://10.120.2.212:8001"; // URL du frontend pour générer les liens de signalement
 const outputDir = path.join(__dirname, "qr_codes");
 
 if (!fs.existsSync(outputDir)) {

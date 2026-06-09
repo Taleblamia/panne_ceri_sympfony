@@ -8,6 +8,7 @@ class Catalog
 
     public function __construct()
     {
+        // Les listes de postes et de pannes sont stockees dans backend-symfony/data.
         $this->dataDir = __DIR__ . '/data';
     }
 
@@ -23,6 +24,7 @@ class Catalog
 
     public function findPcByIdOrToken(string $value): ?array
     {
+        // Accepte soit le code du poste, soit le token cache dans le QR code.
         $value = strtolower(trim($value));
 
         foreach ($this->pcs() as $pc) {
@@ -36,6 +38,7 @@ class Catalog
 
     private function readJson(string $file): array
     {
+        // Lecture simple d'un fichier JSON du catalogue.
         $path = $this->dataDir . '/' . $file;
 
         if (!is_file($path)) {

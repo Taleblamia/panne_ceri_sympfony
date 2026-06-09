@@ -3,16 +3,31 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#003bba">
     <title>{% block title %}Ticket Panne CERI{% endblock %}</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/icon-512.png">
     <link rel="stylesheet" href="/app.css">
   </head>
   <body>
+    {# Les pages Twig remplissent ce bloc avec leur contenu. #}
     {% block body %}{% endblock %}
 
+    {# Lucide fournit les icones utilisees dans l'interface. #}
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
+      if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark-mode");
+      }
+
       if (window.lucide) {
         window.lucide.createIcons();
+      }
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch((error) => {
+          console.log(error);
+        });
       }
     </script>
     {% block scripts %}{% endblock %}

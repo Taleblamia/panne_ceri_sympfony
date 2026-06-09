@@ -1,0 +1,45 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}Mes signalements{% endblock %}
+
+{% block body %}
+  {# Historique local des tickets declares par l'utilisateur. #}
+  <div class="report-page">
+    <div class="report-card">
+      <a class="back-link" href="/">
+        <i data-lucide="arrow-left" width="20" height="20"></i>
+      </a>
+
+      <h1>Mes signalements</h1>
+
+      {% if email %}
+        <div class="pc-info-card">
+          <p>Adresse email universitaire</p>
+          <strong>{{ email }}</strong>
+        </div>
+
+        <p class="results-count">{{ tickets|length }} signalement(s) trouvé(s)</p>
+
+        {% if tickets is empty %}
+          <div class="info-box">Aucun signalement local n'est encore associe a cette adresse.</div>
+        {% endif %}
+
+        <div class="ticket-list">
+          {% for ticket in tickets %}
+            {% set pc_parts = ticket.pc_id|split('-') %}
+            <article class="ticket-item">
+              <div class="ticket-row">
+                <strong>{{ ticket.pc_id }}</strong>
+                <span>{{ ticket.type_panne == 'Autre' ? ticket.custom_panne : ticket.type_panne }}</span>
+              </div>
+              <p>Salle {{ pc_parts[0]|replace({'mc': ''}) }} - Poste {{ pc_parts[1] is defined ? pc_parts[1] : '' }}</p>
+              <small>{{ ticket.created_at }}</small>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="info-box">Aucun signalement effectué pour le moment.</div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

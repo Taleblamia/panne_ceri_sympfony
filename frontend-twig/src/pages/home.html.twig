@@ -3,30 +3,52 @@
 {% block title %}Ticket Panne CERI{% endblock %}
 
 {% block body %}
+  {# Accueil de l'application : scan QR code ou saisie manuelle du poste. #}
   <div class="home-page">
     <div class="home-card">
       <div class="home-header">
+        <button class="menu-button" type="button" id="menuButton" aria-label="Menu">
+          <i data-lucide="menu" width="28" height="28"></i>
+        </button>
+
+        <div class="home-menu" id="homeMenu" hidden>
+          <button type="button" id="languageButton">🌐 Passer en anglais</button>
+          <button type="button" id="themeButton">🌙 Mode sombre</button>
+          <button type="button" id="myReportsButton">📋 Mes signalements</button>
+        </div>
+
         <i class="pc-logo" data-lucide="monitor" width="82" height="82"></i>
       </div>
 
       <div class="home-content">
-        <h1>Ticket Panne CERI</h1>
+        <h1 data-i18n="title">Ticket Panne CERI</h1>
 
-        <p>Signalez facilement une panne sur un poste informatique en scannant le QR code du poste concerné.</p>
+        <p data-i18n="intro">Signalez facilement une panne sur un poste informatique en scannant le QR code du poste concerné.</p>
 
         <button class="scan-btn" type="button" id="scanButton">
           <i data-lucide="qr-code" width="22" height="22"></i>
-          Scanner un QR code
+          <span data-i18n="scan">Scanner un QR code</span>
         </button>
 
         <div id="reader" class="reader" hidden></div>
 
-        <div class="info-box">Vous pouvez aussi saisir le code du poste si le QR code ne fonctionne pas.</div>
+        <div class="info-box" data-i18n="manualInfo">Vous pouvez aussi saisir le code du poste si le QR code ne fonctionne pas.</div>
 
         <div class="manual-box">
           <input type="text" id="pcCode" placeholder="Exemple : mc128-24">
-          <button type="button" id="continueButton">Continuer</button>
+          <button type="button" id="continueButton" data-i18n="continue">Continuer</button>
         </div>
+      </div>
+    </div>
+
+    <div class="app-dialog" id="appDialog" hidden>
+      <div class="app-dialog-card">
+        <div class="app-dialog-icon">
+          <i data-lucide="triangle-alert" width="34" height="34"></i>
+        </div>
+        <h2 id="dialogTitle">Attention</h2>
+        <p id="dialogMessage"></p>
+        <button type="button" id="dialogButton">OK</button>
       </div>
     </div>
   </div>
@@ -35,23 +57,131 @@
 {% block scripts %}
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
+    // Elements principaux de la page d'accueil.
     const pcInput = document.getElementById("pcCode");
     const continueButton = document.getElementById("continueButton");
     const scanButton = document.getElementById("scanButton");
     const reader = document.getElementById("reader");
+    const menuButton = document.getElementById("menuButton");
+    const homeMenu = document.getElementById("homeMenu");
+    const languageButton = document.getElementById("languageButton");
+    const themeButton = document.getElementById("themeButton");
+    const myReportsButton = document.getElementById("myReportsButton");
+    const appDialog = document.getElementById("appDialog");
+    const dialogTitle = document.getElementById("dialogTitle");
+    const dialogMessage = document.getElementById("dialogMessage");
+    const dialogButton = document.getElementById("dialogButton");
+
+    const translations = {
+      fr: {
+        title: "Ticket Panne CERI",
+        intro: "Signalez facilement une panne sur un poste informatique en scannant le QR code du poste concerné.",
+        scan: "Scanner un QR code",
+        manualInfo: "Vous pouvez aussi saisir le code du poste si le QR code ne fonctionne pas.",
+        continue: "Continuer",
+        language: "🌐 Passer en anglais",
+        dark: "🌙 Mode sombre",
+        light: "☀️ Mode clair",
+        myReports: "📋 Mes signalements",
+        missingCode: "Veuillez entrer un code poste.",
+        pcNotFound: "PC introuvable. Veuillez vérifier le code du poste.",
+      },
+      en: {
+        title: "CERI Failure Ticket",
+        intro: "Easily report a problem on a computer by scanning the workstation QR code.",
+        scan: "Scan a QR code",
+        manualInfo: "You can also enter the workstation code if the QR code does not work.",
+        continue: "Continue",
+        language: "🌐 Switch to French",
+        dark: "🌙 Dark mode",
+        light: "☀️ Light mode",
+        myReports: "📋 My reports",
+        missingCode: "Please enter a workstation code.",
+        pcNotFound: "PC not found. Please check the workstation code.",
+      },
+    };
+
+    let currentLanguage = localStorage.getItem("language") || "fr";
+
+    function showMessage(message, title = "Attention") {
+      dialogTitle.textContent = title;
+      dialogMessage.textContent = message;
+      appDialog.hidden = false;
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function applyLanguage() {
+      const texts = translations[currentLanguage];
+
+      document.querySelectorAll("[data-i18n]").forEach((element) => {
+        element.textContent = texts[element.dataset.i18n];
+      });
+
+      languageButton.textContent = texts.language;
+      myReportsButton.textContent = texts.myReports;
+      themeButton.textContent = document.body.classList.contains("dark-mode") ? texts.light : texts.dark;
+    }
+
+    function buildSavedEmail() {
+      const prefix = localStorage.getItem("emailPrefix") || "";
+      const userType = localStorage.getItem("userType") || "etudiant";
+
+      if (!prefix) return "";
+
+      return `${prefix}${userType === "Professeur" ? "@univ-avignon.fr" : "@alumni.univ-avignon.fr"}`.toLowerCase();
+    }
+
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark-mode");
+    }
+
+    menuButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      homeMenu.hidden = !homeMenu.hidden;
+    });
+
+    homeMenu.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    document.addEventListener("click", () => {
+      homeMenu.hidden = true;
+    });
+
+    languageButton.addEventListener("click", () => {
+      currentLanguage = currentLanguage === "fr" ? "en" : "fr";
+      localStorage.setItem("language", currentLanguage);
+      applyLanguage();
+    });
+
+    themeButton.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      localStorage.setItem("theme", document.body.classList.contains("dark-mode") ? "dark" : "light");
+      applyLanguage();
+    });
+
+    myReportsButton.addEventListener("click", () => {
+      const email = buildSavedEmail();
+      window.location.href = email ? `/mes-signalements?email=${encodeURIComponent(email)}` : "/mes-signalements";
+    });
+
+    dialogButton.addEventListener("click", () => {
+      appDialog.hidden = true;
+    });
 
     continueButton.addEventListener("click", async () => {
+      // Verification du code poste avant d'ouvrir le formulaire.
       const code = pcInput.value.trim().toLowerCase();
 
       if (!code) {
-        alert("Veuillez entrer un code poste");
+        showMessage(translations[currentLanguage].missingCode);
         return;
       }
 
       const response = await fetch(`/api/pcs/${encodeURIComponent(code)}`);
 
       if (!response.ok) {
-        alert("PC introuvable. Veuillez vérifier le code du poste.");
+        showMessage(translations[currentLanguage].pcNotFound);
         return;
       }
 
@@ -60,6 +190,7 @@
     });
 
     scanButton.addEventListener("click", () => {
+      // Lance la camera et redirige vers l'URL contenue dans le QR code.
       reader.hidden = false;
 
       const scanner = new Html5Qrcode("reader");
@@ -83,5 +214,7 @@
           console.log(err);
         });
     });
+
+    applyLanguage();
   </script>
 {% endblock %}

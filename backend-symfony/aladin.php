@@ -10,11 +10,13 @@ class Aladin
 
     public function buildUrl(array $ticket): string
     {
+        // Construit l'URL du formulaire ALADIN avec les champs deja remplis.
         $baseUrl = $_ENV['ALADIN_URL'] ?? $_SERVER['ALADIN_URL'] ?? '';
         $pc = $this->catalog->findPcByIdOrToken((string) $ticket['pc_id']);
         $panne = $this->clean($ticket['type_panne'] === 'Autre' ? ($ticket['custom_panne'] ?? '') : ($ticket['type_panne'] ?? ''));
 
         $title = $this->clean('Panne PC ' . $ticket['pc_id'] . ' - ' . $panne);
+        // ALADIN garde mieux la mise en forme avec des espaces qu'avec des balises HTML.
         $description =
             'Salle ' . $this->clean($pc['salle'] ?? 'Non renseignee') . '                                                                                                        ' .
             'Poste ' . $this->clean($pc['poste'] ?? 'Non renseigne') . '                                                                                                         ' .
@@ -35,6 +37,7 @@ class Aladin
 
     private function clean(?string $text): string
     {
+        // Evite les caracteres qui peuvent mal passer dans le formulaire ALADIN.
         $text = $text ?? '';
         $converted = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
         $converted = $converted === false ? $text : $converted;

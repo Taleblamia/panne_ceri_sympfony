@@ -3,6 +3,7 @@
 {% block title %}Déclaration de panne{% endblock %}
 
 {% block body %}
+  {# Formulaire affiche apres scan du QR code ou saisie du code poste. #}
   <div class="report-page">
     <div class="report-card">
       <h1>Déclaration de panne</h1>
@@ -12,6 +13,7 @@
       {% endif %}
 
       <div class="confirmation-card" id="waitingValidation" {% if not waiting_email %}hidden{% endif %}>
+          {# Message affiche quand une validation email est necessaire. #}
           <div class="mail-icon">📧</div>
           <h2>Email envoyé !</h2>
           <p class="confirmation-text">Un email de validation a été envoyé à :</p>
@@ -35,6 +37,7 @@
         {% endif %}
 
         <form id="ticketForm" {% if waiting_email %}hidden{% endif %}>
+          {# L'email est separe en identifiant + domaine pour limiter les erreurs. #}
           <label>Type d'utilisateur <span>*</span></label>
           <div class="user-type-box">
             <label>
@@ -73,11 +76,23 @@
         </form>
       {% endif %}
     </div>
+
+    <div class="app-dialog" id="appDialog" hidden>
+      <div class="app-dialog-card">
+        <div class="app-dialog-icon">
+          <i data-lucide="triangle-alert" width="34" height="34"></i>
+        </div>
+        <h2>Attention</h2>
+        <p id="dialogMessage"></p>
+        <button type="button" id="dialogButton">OK</button>
+      </div>
+    </div>
   </div>
 {% endblock %}
 
 {% block scripts %}
   <script>
+    // Donnees du poste envoyees par Symfony vers la page Twig.
     const pc = {{ pc ? pc|json_encode|raw : 'null' }};
     const emailPrefix = document.getElementById("emailPrefix");
     const typePanne = document.getElementById("typePanne");
@@ -91,12 +106,26 @@
     const waitingValidation = document.getElementById("waitingValidation");
     const waitingEmail = document.getElementById("waitingEmail");
     const pcInfo = document.getElementById("pcInfo");
+    const appDialog = document.getElementById("appDialog");
+    const dialogMessage = document.getElementById("dialogMessage");
+    const dialogButton = document.getElementById("dialogButton");
+
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark-mode");
+    }
+
+    function showMessage(message) {
+      dialogMessage.textContent = message;
+      appDialog.hidden = false;
+      if (window.lucide) window.lucide.createIcons();
+    }
 
     function selectedUserType() {
       return document.querySelector('input[name="user_type"]:checked')?.value || "etudiant";
     }
 
     function updateDomain() {
+      // Le domaine depend du type d'utilisateur choisi.
       if (!emailDomain) return;
 
       emailDomain.textContent = selectedUserType() === "Professeur" ? "@univ-avignon.fr" : "@alumni.univ-avignon.fr";
@@ -104,6 +133,7 @@
     }
 
     function updateForm() {
+      // Active le bouton seulement quand les champs obligatoires sont remplis.
       if (!submitButton) return;
 
       const needsCustom = typePanne.value === "Autre";
@@ -133,6 +163,7 @@
     }
 
     function getDeviceId() {
+      // Identifiant local de l'appareil pour ne pas valider le mail a chaque fois.
       let deviceId = localStorage.getItem("ticketPanneDeviceId");
 
       if (!deviceId) {
@@ -172,6 +203,7 @@
     customPanne?.addEventListener("input", updateForm);
 
     ticketForm?.addEventListener("submit", async (event) => {
+      // Envoi du signalement au backend Symfony.
       event.preventDefault();
 
       const email = buildEmail();
@@ -213,7 +245,11 @@
         return;
       }
 
-      alert(data.message);
+      showMessage(data.message || "Une erreur est survenue.");
+    });
+
+    dialogButton?.addEventListener("click", () => {
+      appDialog.hidden = true;
     });
 
     updateDomain();

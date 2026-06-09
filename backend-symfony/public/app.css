@@ -27,6 +27,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .pc-logo {
@@ -256,6 +257,219 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.menu-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+}
+
+.home-menu {
+  position: absolute;
+  top: 62px;
+  left: 16px;
+  width: 245px;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  z-index: 5;
+}
+
+.home-menu button {
+  width: 100%;
+  border: none;
+  background: white;
+  color: #111827;
+  padding: 15px 18px;
+  text-align: left;
+  font-weight: bold;
+  cursor: pointer;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.home-menu button:last-child {
+  border-bottom: none;
+}
+
+.back-link {
+  color: #003b95;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.error-text {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #b91c1c;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.app-dialog {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.app-dialog[hidden] {
+  display: none;
+}
+
+.app-dialog-card {
+  width: 100%;
+  max-width: 330px;
+  background: white;
+  border-radius: 18px;
+  padding: 22px 20px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+.app-dialog-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-dialog-card h2 {
+  margin: 0 0 10px;
+  color: #991b1b;
+  font-size: 20px;
+}
+
+.app-dialog-card p {
+  margin: 0 0 18px;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+.app-dialog-card button {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  background: #003bba;
+  color: white;
+  padding: 13px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.results-count {
+  font-weight: bold;
+  color: #003b95;
+  margin: 14px 0;
+}
+
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ticket-item {
+  border: 1px solid #dbe3ef;
+  background: #f9fbff;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.ticket-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #003b95;
+}
+
+.ticket-item p {
+  margin: 10px 0 6px;
+  color: #4b5563;
+}
+
+.ticket-item small {
+  color: #6b7280;
+}
+
+body.dark-mode {
+  background: #f4f7fb;
+}
+
+body.dark-mode .home-page,
+body.dark-mode .report-page {
+  background: #f4f7fb;
+}
+
+body.dark-mode .home-card,
+body.dark-mode .report-card,
+body.dark-mode .app-dialog-card {
+  background: #111827;
+  color: white;
+}
+
+body.dark-mode .home-content h1,
+body.dark-mode .report-card h1,
+body.dark-mode .report-card label,
+body.dark-mode .app-dialog-card p {
+  color: white;
+}
+
+body.dark-mode .home-content p,
+body.dark-mode .ticket-item p,
+body.dark-mode .ticket-item small {
+  color: #d1d5db;
+}
+
+body.dark-mode .info-box,
+body.dark-mode .pc-info-card,
+body.dark-mode .ticket-item {
+  background: #1f2937;
+  color: #dbeafe;
+  border-color: #334155;
+}
+
+body.dark-mode .home-menu,
+body.dark-mode .home-menu button {
+  background: #111827;
+  color: white;
+}
+
+body.dark-mode .home-menu button {
+  border-color: #334155;
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  background: #2b2b2b;
+  color: white;
+  border-color: #475569;
+}
+
+body.dark-mode .email-box span {
+  color: #dbeafe;
 }
 
 .success-box {
