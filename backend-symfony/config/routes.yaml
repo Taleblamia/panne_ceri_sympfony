@@ -1,7 +1,3 @@
-api_routes:
-  resource: ../server.php
-  type: attribute
-
-front_routes:
-  resource: ../front.php
+app_routes:
+  resource: ../src/
   type: attribute

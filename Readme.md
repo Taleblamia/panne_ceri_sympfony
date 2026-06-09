@@ -65,11 +65,11 @@ L'objectif de cette application est donc de simplifier ce parcours :
 
 ## Fichiers importants
 
-- `backend-symfony/server.php` : routes API, validation email, création des signalements.
-- `backend-symfony/front.php` : routes des pages Twig.
-- `backend-symfony/db.php` : gestion de la base SQLite.
-- `backend-symfony/aladin.php` : construction de l'URL ALADIN préremplie.
-- `backend-symfony/catalog.php` : lecture des postes et types de panne.
+- `backend-symfony/src/Server.php` : routes API, validation email, création des signalements.
+- `backend-symfony/src/Front.php` : routes des pages Twig.
+- `backend-symfony/src/Database.php` : gestion de la base SQLite.
+- `backend-symfony/src/Aladin.php` : construction de l'URL ALADIN préremplie.
+- `backend-symfony/src/Catalog.php` : lecture des postes et types de panne.
 - `frontend-twig/src/App.html.twig` : base HTML des pages.
 - `frontend-twig/src/pages/home.html.twig` : page d'accueil.
 - `frontend-twig/src/pages/report.html.twig` : formulaire de déclaration.
@@ -116,7 +116,6 @@ Depuis le dossier Symfony :
 ```bash
 cd backend-symfony
 composer install
-composer dump-autoload
 ```
 
 ---

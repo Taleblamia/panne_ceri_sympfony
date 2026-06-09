@@ -11,7 +11,7 @@ class Database
     public function __construct()
     {
         // Base SQLite locale utilisee par l'application Symfony.
-        $this->pdo = new PDO('sqlite:' . __DIR__ . '/database.db');
+        $this->pdo = new PDO('sqlite:' . dirname(__DIR__) . '/database.db');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->migrate();
     }

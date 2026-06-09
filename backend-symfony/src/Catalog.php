@@ -9,7 +9,7 @@ class Catalog
     public function __construct()
     {
         // Les listes de postes et de pannes sont stockees dans backend-symfony/data.
-        $this->dataDir = __DIR__ . '/data';
+        $this->dataDir = dirname(__DIR__) . '/data';
     }
 
     public function pannes(): array
