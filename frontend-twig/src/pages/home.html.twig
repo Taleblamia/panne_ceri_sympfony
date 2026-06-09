@@ -3,6 +3,7 @@
 {% block title %}Ticket Panne CERI{% endblock %}
 
 {% block body %}
+  {# Page d'accueil : scan QR code, saisie manuelle et menu de navigation. #}
   <div class="home-page">
     <div class="home-card">
       <div class="home-header">
@@ -11,9 +12,11 @@
 
       <button class="admin-menu-btn" type="button" id="menuButton">☰</button>
 
+      {# Menu rapide : langue, thème, mes signalements et espace admin. #}
       <div class="home-menu" id="homeMenu" hidden>
         <button type="button" id="languageButton">🌐 <span data-i18n="language">Passer en anglais</span></button>
         <button type="button" id="themeButton">🌙 Mode sombre</button>
+        <button type="button" id="myReportsButton">☑ <span data-i18n="myReports">Mes signalements</span></button>
         <button type="button" onclick="window.location.href='/admin'">↪ <span data-i18n="admin">Espace admin</span></button>
       </div>
 
@@ -29,6 +32,7 @@
 
         <div id="reader" style="margin-top:20px; display:none;"></div>
 
+        {# Saisie manuelle si le scan QR code ne fonctionne pas. #}
         <div class="info-box" data-i18n="info">Vous pouvez aussi saisir le code du poste si le QR code ne fonctionne pas.</div>
 
         <div class="manual-box">
@@ -43,6 +47,7 @@
 {% block scripts %}
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
+    // Éléments principaux de la page d'accueil.
     const menuButton = document.getElementById("menuButton");
     const homeMenu = document.getElementById("homeMenu");
     const themeButton = document.getElementById("themeButton");
@@ -51,6 +56,7 @@
     const reader = document.getElementById("reader");
 
     menuButton.addEventListener("click", (event) => {
+      // Ouvre ou ferme le menu.
       event.stopPropagation();
       homeMenu.hidden = !homeMenu.hidden;
     });
@@ -64,6 +70,7 @@
     });
 
     themeButton.addEventListener("click", () => {
+      // Active/désactive le mode sombre et le sauvegarde.
       document.body.classList.toggle("dark");
       document.body.classList.toggle("light");
       localStorage.setItem("darkMode", document.body.classList.contains("dark"));
@@ -71,11 +78,27 @@
     });
 
     document.getElementById("languageButton").addEventListener("click", () => {
+      // Change la langue de l'interface.
       localStorage.setItem("language", currentLanguage() === "fr" ? "en" : "fr");
       applyLanguage();
     });
 
+    document.getElementById("myReportsButton").addEventListener("click", () => {
+      // Ouvre "Mes signalements" avec l'email mémorisé si disponible.
+      const emailPrefix = getCookie("emailPrefix");
+      const userType = getCookie("userType") || "etudiant";
+
+      if (!emailPrefix) {
+        window.location.href = "/mes-signalements";
+        return;
+      }
+
+      const suffix = userType === "Professeur" ? "@univ-avignon.fr" : "@alumni.univ-avignon.fr";
+      window.location.href = "/mes-signalements?email=" + encodeURIComponent((emailPrefix + suffix).toLowerCase());
+    });
+
     continueButton.addEventListener("click", () => {
+      // Redirige vers le formulaire à partir du code poste saisi.
       const code = document.getElementById("pcCode").value.trim().toLowerCase();
 
       if (!code) {
@@ -87,6 +110,7 @@
     });
 
     function getCodeFromQr(decodedText) {
+      // Accepte soit une URL complète, soit directement un code/token.
       const value = decodedText.trim();
 
       try {
@@ -105,6 +129,7 @@
     }
 
     scanButton.addEventListener("click", async () => {
+      // Lance la caméra et lit le QR code du poste.
       reader.style.display = "block";
 
       if (!window.Html5Qrcode) {

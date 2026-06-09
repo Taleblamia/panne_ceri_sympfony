@@ -6,6 +6,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 class PcCatalog
 {
+    // Les données sont gardées en mémoire après la première lecture.
     private ?array $pcs = null;
     private ?array $pannes = null;
 
@@ -17,6 +18,7 @@ class PcCatalog
 
     public function getPannes(): array
     {
+        // Lit la liste des types de pannes proposés dans le formulaire.
         if ($this->pannes === null) {
             $this->pannes = $this->readJson('/data/pannes.json');
         }
@@ -26,6 +28,7 @@ class PcCatalog
 
     public function getPcs(): array
     {
+        // Lit la liste des postes et leurs tokens QR code.
         if ($this->pcs === null) {
             $this->pcs = $this->readJson('/data/pcs.json');
         }
@@ -35,6 +38,7 @@ class PcCatalog
 
     public function findPcByIdOrToken(string $value): ?array
     {
+        // Recherche un poste soit par son id, soit par son token QR code.
         foreach ($this->getPcs() as $pc) {
             if (($pc['id'] ?? null) === $value || ($pc['token'] ?? null) === $value) {
                 return $pc;
@@ -46,6 +50,7 @@ class PcCatalog
 
     public function getSalles(): array
     {
+        // Récupère la liste des salles distinctes pour l'administration.
         $salles = array_values(array_unique(array_map(
             static fn (array $pc): string => (string) ($pc['salle'] ?? ''),
             $this->getPcs()
@@ -57,6 +62,7 @@ class PcCatalog
 
     private function readJson(string $relativePath): array
     {
+        // Lit un fichier JSON du dossier data.
         $content = file_get_contents($this->projectDir.$relativePath);
 
         if ($content === false) {

@@ -3,9 +3,11 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block body %}
+  {# Page générique utilisée pour afficher les confirmations et les erreurs. #}
   <div class="report-page">
     <div class="report-card confirmation-card">
       {% if title starts with 'Email envoyé' %}
+        {# Cas où un email de validation vient d'être envoyé. #}
         <div class="mail-icon">📧</div>
         <h2>Email envoyé !</h2>
         <p class="confirmation-text">{{ message }}</p>
@@ -17,6 +19,7 @@
         <p class="confirmation-text">Veuillez valider votre adresse email pour finaliser votre demande.</p>
         <p class="delay-text">Lien valable 30 minutes.</p>
       {% elseif title starts with 'Ticket envoyé' or title starts with 'Email validé' %}
+        {# Cas où le ticket est bien créé. #}
         <div class="success-icon">✓</div>
         <h2>{{ title }}</h2>
         <p>{{ message }}</p>
@@ -25,6 +28,7 @@
         {% endif %}
         <a class="secondary-btn full-btn" href="/">Retour à l'accueil</a>
       {% else %}
+        {# Cas erreur : PC introuvable, limite atteinte, erreur GLPI, etc. #}
         <h1>{{ title }}</h1>
         <p>{{ message }}</p>
         <a class="secondary-btn full-btn" href="/">Retour à l'accueil</a>
@@ -36,6 +40,7 @@
 {% block scripts %}
   {% if ticket is defined %}
     <script>
+      // Génère un PDF récapitulatif si un ticket vient d'être créé.
       document.getElementById("downloadPdfButton").addEventListener("click", () => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();

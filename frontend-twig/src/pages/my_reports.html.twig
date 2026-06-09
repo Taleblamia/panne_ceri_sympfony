@@ -1,0 +1,155 @@
+{% extends 'src/App.html.twig' %}
+
+{% block title %}Mes signalements{% endblock %}
+
+{% block body %}
+  {# Page utilisateur : affiche les tickets liés à l'email mémorisé. #}
+  <div class="report-page">
+    <div class="report-card my-reports-card">
+      <div class="mobile-topbar">
+        <button class="back-icon-btn" type="button" onclick="window.location.href='/'" aria-label="Retour">
+          <i data-lucide="chevron-left" width="24" height="24"></i>
+        </button>
+        <h1 data-i18n="myReports">Mes signalements</h1>
+      </div>
+
+      {% if email %}
+        {# Email utilisé pour chercher les signalements locaux. #}
+        <div class="current-email-box">
+          <span data-i18n="email">Adresse email universitaire</span>
+          <strong>{{ email }}</strong>
+        </div>
+
+        {% if tickets %}
+          {# Liste des tickets trouvés pour cet email. #}
+          <p class="result-count">{{ tickets|length }} <span data-i18n="reportsFound">signalement(s) trouvé(s)</span></p>
+
+          <div class="compact-ticket-list">
+            {% for ticket in tickets %}
+              <article class="compact-ticket">
+                <div>
+                  <strong>{{ ticket.pc_id }}</strong>
+                  <span>{{ ticket.type_panne == 'Autre' ? ticket.custom_panne : ticket.type_panne }}</span>
+                </div>
+                <small>Salle {{ ticket.salle }} - Poste {{ ticket.poste }}</small>
+                <button type="button" class="secondary-btn full-btn mini-detail-btn" data-my-ticket="{{ ticket.id }}" data-i18n="details">Voir détails</button>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="empty-state" data-i18n="noReports">Aucun signalement trouvé pour cette adresse.</p>
+        {% endif %}
+      {% else %}
+        <p class="empty-state">Aucun email mémorisé. Faites d’abord un signalement avec votre adresse universitaire.</p>
+      {% endif %}
+
+      <div class="detail-modal" id="myReportModal" hidden>
+        {# Fenêtre de détail d'un signalement. #}
+        <div class="detail-panel">
+          <button class="modal-close" type="button" id="closeMyReport" aria-label="Fermer">×</button>
+          <h2 data-i18n="detailTitle">Détail de la panne</h2>
+          <div id="myReportDetail"></div>
+        </div>
+      </div>
+
+      <div class="image-modal" id="myImageModal" hidden>
+        {# Fenêtre pour agrandir une image jointe. #}
+        <button class="image-modal-close" type="button" id="closeMyImage" aria-label="Fermer">×</button>
+        <img id="myImagePreview" alt="Image jointe agrandie">
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    // Tickets transmis par Symfony à la page.
+    const myTickets = {{ tickets|json_encode|raw }};
+    const modal = document.getElementById("myReportModal");
+    const detail = document.getElementById("myReportDetail");
+    const closeButton = document.getElementById("closeMyReport");
+    const imageModal = document.getElementById("myImageModal");
+    const imagePreview = document.getElementById("myImagePreview");
+    const closeImage = document.getElementById("closeMyImage");
+
+    function label(ticket) {
+      // Affiche la panne personnalisée si le type est "Autre".
+      return ticket.type_panne === "Autre" ? (ticket.custom_panne || "Autre") : ticket.type_panne;
+    }
+
+    function images(ticket) {
+      // Convertit la liste JSON des images en tableau JavaScript.
+      try {
+        return JSON.parse(ticket.image_paths || "[]");
+      } catch {
+        return [];
+      }
+    }
+
+    function detailRow(label, value) {
+      return `<div class="detail-row"><span>${label}</span><strong>${value}</strong></div>`;
+    }
+
+    function imageGallery(ticket) {
+      // Crée les miniatures des images jointes.
+      const paths = images(ticket);
+
+      if (!paths.length) {
+        return "";
+      }
+
+      return `
+        <div class="detail-images">
+          <span>Images jointes</span>
+          <div>
+            ${paths.map((path) => `<button type="button" class="image-thumb" data-image-src="${path}"><img src="${path}" alt="Image jointe"></button>`).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    document.querySelectorAll("[data-my-ticket]").forEach((button) => {
+      // Ouvre le détail du ticket sélectionné.
+      button.addEventListener("click", () => {
+        const ticket = myTickets.find((item) => String(item.id) === String(button.dataset.myTicket));
+        if (!ticket) return;
+
+        detail.innerHTML = `
+          <div class="ticket-detail-grid">
+            ${detailRow("PC", ticket.pc_id)}
+            ${detailRow((i18n[currentLanguage()] || i18n.fr).room, ticket.salle)}
+            ${detailRow((i18n[currentLanguage()] || i18n.fr).computer, ticket.poste)}
+            ${detailRow((i18n[currentLanguage()] || i18n.fr).email, ticket.email)}
+            ${detailRow((i18n[currentLanguage()] || i18n.fr).problem, label(ticket))}
+            ${detailRow((i18n[currentLanguage()] || i18n.fr).descriptionLabel, ticket.description || (i18n[currentLanguage()] || i18n.fr).noDescription)}
+            ${detailRow("Date", ticket.created_at)}
+          </div>
+          ${imageGallery(ticket)}
+        `;
+        modal.hidden = false;
+        detail.querySelectorAll("[data-image-src]").forEach((button) => {
+          button.addEventListener("click", () => {
+            imagePreview.src = button.dataset.imageSrc;
+            imageModal.hidden = false;
+          });
+        });
+      });
+    });
+
+    closeButton.addEventListener("click", () => {
+      modal.hidden = true;
+    });
+
+    closeImage.addEventListener("click", () => {
+      imageModal.hidden = true;
+      imagePreview.removeAttribute("src");
+    });
+
+    imageModal.addEventListener("click", (event) => {
+      if (event.target === imageModal) {
+        imageModal.hidden = true;
+        imagePreview.removeAttribute("src");
+      }
+    });
+  </script>
+{% endblock %}

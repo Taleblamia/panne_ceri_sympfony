@@ -17,19 +17,23 @@ class GlpiTicketService
 
     public function createTicket(array $ticketData): array
     {
+        // Retrouve les informations du poste avant de créer le ticket GLPI.
         $pc = $this->pcCatalog->findPcByIdOrToken($ticketData['pc_id']);
 
         if (!$pc) {
             throw new \RuntimeException('PC introuvable');
         }
 
+        // Si l'utilisateur choisit "Autre", on utilise la panne saisie manuellement.
         $panneFinale = $ticketData['type_panne'] === 'Autre'
             ? ($ticketData['custom_panne'] ?? 'Autre')
             : $ticketData['type_panne'];
 
+        // Ouvre une session GLPI temporaire avec les tokens configurés.
         $sessionToken = $this->initSession();
 
         try {
+            // Envoie la demande de création du ticket à l'API REST GLPI.
             $response = $this->httpClient->request('POST', $this->glpiUrl.'/Ticket', [
                 'headers' => [
                     'Content-Type' => 'application/json',
@@ -53,6 +57,7 @@ class GlpiTicketService
 
             return $data;
         } finally {
+            // Ferme toujours la session GLPI, même en cas d'erreur.
             $this->httpClient->request('GET', $this->glpiUrl.'/killSession', [
                 'headers' => [
                     'Session-Token' => $sessionToken,
@@ -64,6 +69,7 @@ class GlpiTicketService
 
     private function initSession(): string
     {
+        // Demande à GLPI un Session Token valide.
         $response = $this->httpClient->request('GET', $this->glpiUrl.'/initSession', [
             'headers' => [
                 'Authorization' => 'user_token '.$this->userToken,
@@ -82,19 +88,25 @@ class GlpiTicketService
 
     private function buildContent(array $ticketData, array $pc): string
     {
+        // Prépare le contenu texte qui sera visible dans le ticket GLPI.
         $customLine = $ticketData['type_panne'] === 'Autre'
             ? sprintf("Panne précisée : %s\n", $ticketData['custom_panne'] ?? '')
             : '';
+        $images = json_decode((string) ($ticketData['image_paths'] ?? '[]'), true) ?: [];
+        $imageLine = $images
+            ? sprintf("\nImages jointes dans l'application : %s", count($images))
+            : '';
 
         return sprintf(
-            "Email utilisateur : %s\nPC ID : %s\nSalle : %s\nPoste : %s\nType de panne : %s\n%sDescription : %s",
+            "Email utilisateur : %s\nPC ID : %s\nSalle : %s\nPoste : %s\nType de panne : %s\n%sDescription : %s%s",
             $ticketData['email'],
             $ticketData['pc_id'],
             $pc['salle'] ?? '',
             $pc['poste'] ?? '',
             $ticketData['type_panne'],
             $customLine,
-            $ticketData['description'] ?: 'Aucune description'
+            $ticketData['description'] ?: 'Aucune description',
+            $imageLine
         );
     }
 }

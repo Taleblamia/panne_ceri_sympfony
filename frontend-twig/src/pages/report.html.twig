@@ -3,6 +3,7 @@
 {% block title %}Déclaration de panne{% endblock %}
 
 {% block body %}
+  {# Page de déclaration : formulaire, aperçu, validation et confirmation. #}
   <div class="report-page">
     <div class="report-card">
       <div class="mobile-topbar">
@@ -13,6 +14,7 @@
       </div>
 
       <div class="pc-info-card" id="pcInfo">
+        {# Informations du poste récupérées grâce au QR code ou au code manuel. #}
         <p data-i18n="detected">Poste détecté</p>
         <div><strong data-i18n="room">Salle</strong> : {{ pc.salle }}</div>
         <div><strong data-i18n="computer">Poste</strong> : {{ pc.poste }}</div>
@@ -20,6 +22,7 @@
 
       <form id="ticketForm">
         <div id="formStep">
+          {# Étape 1 : saisie des informations de la panne. #}
           <label><span data-i18n="userType">Type d'utilisateur</span></label>
 
           <div class="user-type-box">
@@ -44,6 +47,7 @@
 
           <input type="hidden" name="email" id="emailFull">
 
+          {# Liste des pannes chargée depuis le fichier pannes.json. #}
           <label><span data-i18n="problemType">Type de panne</span> <span class="required-star">*</span></label>
 
           <select name="type_panne" id="typePanne" required>
@@ -65,10 +69,15 @@
           <textarea name="description" id="description" maxlength="500" placeholder="Décrivez le problème rencontré..." data-i18n-placeholder="descriptionPlaceholder"></textarea>
           <p class="char-count"><span id="descriptionCount">0</span>/500</p>
 
+          <label>Images jointes (optionnel)</label>
+          <input type="file" id="ticketImages" name="images[]" accept="image/*" multiple>
+          <p class="field-help">Vous pouvez ajouter jusqu'à 3 images.</p>
+
           <button type="button" class="primary-btn" id="continueButton" disabled data-i18n="continue">Continuer</button>
         </div>
 
         <div class="preview-card" id="previewStep" hidden>
+          {# Étape 2 : aperçu avant envoi définitif. #}
           <div class="mobile-topbar">
             <button class="back-icon-btn" type="button" id="previewBackButton" aria-label="Retour">
               <i data-lucide="chevron-left" width="24" height="24"></i>
@@ -121,6 +130,14 @@
                 <p id="previewDescription">Aucune description</p>
               </div>
             </div>
+
+            <div class="ticket-row">
+              <i data-lucide="image" width="22" height="22"></i>
+              <div>
+                <strong>Images jointes</strong>
+                <p id="previewImages">Aucune image</p>
+              </div>
+            </div>
           </div>
 
           <button type="submit" class="primary-btn" data-i18n="sendTicket">Envoyer le ticket</button>
@@ -129,6 +146,7 @@
       </form>
 
       <div class="confirmation-card" id="waitingValidationStep" hidden>
+        {# Écran affiché quand l'utilisateur doit valider son email/appareil. #}
         <div class="mail-icon">📧</div>
         <h2 data-i18n="emailSentTitle">Email envoyé !</h2>
         <p class="confirmation-text" data-i18n="emailSentText">Un email de validation a été envoyé à :</p>
@@ -140,11 +158,24 @@
       </div>
 
       <div class="confirmation-card" id="confirmedStep" hidden>
+        {# Écran affiché quand le ticket est créé directement. #}
         <div class="success-icon">✓</div>
         <h2 data-i18n="ticketSentTitle">Ticket envoyé !</h2>
         <p data-i18n="ticketSentText">Merci, votre déclaration a bien été enregistrée.</p>
         <button class="primary-btn" type="button" id="downloadPdfButton" data-i18n="downloadPdf">Télécharger le PDF</button>
         <button class="secondary-btn full-btn" type="button" onclick="window.location.href='/'" data-i18n="backHome">Retour à l'accueil</button>
+      </div>
+
+      <div class="app-alert" id="appAlert" hidden>
+        {# Boîte d'erreur personnalisée, utilisée à la place des alertes navigateur. #}
+        <div class="app-alert-panel">
+          <div class="app-alert-icon">
+            <i data-lucide="triangle-alert" width="30" height="30"></i>
+          </div>
+          <h2 id="appAlertTitle">Attention</h2>
+          <p id="appAlertMessage"></p>
+          <button class="primary-btn" type="button" id="appAlertButton">OK</button>
+        </div>
       </div>
     </div>
   </div>
@@ -152,6 +183,7 @@
 
 {% block scripts %}
   <script>
+    // Récupération des éléments utilisés par le formulaire.
     const form = document.getElementById("ticketForm");
     const formStep = document.getElementById("formStep");
     const previewStep = document.getElementById("previewStep");
@@ -168,18 +200,40 @@
     const customPanneBox = document.getElementById("customPanneBox");
     const description = document.getElementById("description");
     const descriptionCount = document.getElementById("descriptionCount");
+    const ticketImages = document.getElementById("ticketImages");
     const previewBackButton = document.getElementById("previewBackButton");
+    const appAlert = document.getElementById("appAlert");
+    const appAlertTitle = document.getElementById("appAlertTitle");
+    const appAlertMessage = document.getElementById("appAlertMessage");
+    const appAlertButton = document.getElementById("appAlertButton");
+
+    function showAppAlert(message, title = "Attention") {
+      // Affiche un message d'erreur propre dans l'interface.
+      appAlertTitle.textContent = title;
+      appAlertMessage.textContent = message;
+      appAlert.hidden = false;
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    function hideAppAlert() {
+      appAlert.hidden = true;
+    }
 
     function getUserType() {
       return document.querySelector("input[name='user_type']:checked").value;
     }
 
     function buildEmail() {
+      // Construit l'email complet selon le type d'utilisateur.
       emailPrefix.value = emailPrefix.value.trim().toLowerCase();
       return emailPrefix.value + (getUserType() === "etudiant" ? "@alumni.univ-avignon.fr" : "@univ-avignon.fr");
     }
 
     function buildTicket() {
+      // Prépare les données envoyées au backend.
       return {
         pc_id: "{{ pc.id }}",
         email: buildEmail(),
@@ -187,6 +241,44 @@
         custom_panne: customPanne.value,
         description: description.value
       };
+    }
+
+    function selectedImages() {
+      // Limite l'envoi à 3 images maximum.
+      return Array.from(ticketImages.files || []).slice(0, 3);
+    }
+
+    function buildTicketFormData() {
+      // Prépare les données multipart pour envoyer aussi les images.
+      const ticket = buildTicket();
+      const formData = new FormData();
+
+      Object.entries(ticket).forEach(([key, value]) => {
+        formData.append(key, value || "");
+      });
+
+      selectedImages().forEach((image) => {
+        formData.append("images[]", image);
+      });
+
+      return formData;
+    }
+
+    function getDeviceId() {
+      // Génère un identifiant local pour reconnaître l'appareil.
+      let deviceId = localStorage.getItem("ticketPanneDeviceId");
+
+      if (!deviceId) {
+        if (window.crypto && window.crypto.randomUUID) {
+          deviceId = window.crypto.randomUUID();
+        } else {
+          deviceId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+
+        localStorage.setItem("ticketPanneDeviceId", deviceId);
+      }
+
+      return deviceId;
     }
 
     function refreshEmailSuffix() {
@@ -198,6 +290,7 @@
     }
 
     function refreshValidity() {
+      // Active le bouton seulement quand les champs obligatoires sont remplis.
       continueButton.disabled = !isValid();
       descriptionCount.textContent = String(description.value.length);
     }
@@ -214,7 +307,7 @@
       emailPrefix.value = emailPrefix.value.toLowerCase();
     });
 
-    [emailPrefix, typePanne, customPanne, description].forEach((field) => {
+    [emailPrefix, typePanne, customPanne, description, ticketImages].forEach((field) => {
       field.addEventListener("input", refreshValidity);
       field.addEventListener("change", refreshValidity);
     });
@@ -226,11 +319,12 @@
     });
 
     continueButton.addEventListener("click", async () => {
+      // Vérifie l'email et les règles backend avant d'afficher l'aperçu.
       const email = buildEmail();
       const emailRegex = /^[a-zA-Z0-9._%+-]+@(univ-avignon\.fr|alumni\.univ-avignon\.fr)$/;
 
       if (!emailRegex.test(email)) {
-        alert((i18n[currentLanguage()] || i18n.fr).emailAlert);
+        showAppAlert((i18n[currentLanguage()] || i18n.fr).emailAlert);
         return;
       }
 
@@ -245,7 +339,7 @@
       const checkData = await checkResponse.json().catch(() => ({ message: "Erreur serveur." }));
 
       if (!checkResponse.ok) {
-        alert(checkData.message || "Erreur lors de la vérification du ticket.");
+        showAppAlert(checkData.message || "Erreur lors de la vérification du ticket.");
         return;
       }
 
@@ -253,6 +347,7 @@
       document.getElementById("previewEmail").textContent = email;
       document.getElementById("previewPanne").textContent = typePanne.value === "Autre" ? customPanne.value : typePanne.value;
       document.getElementById("previewDescription").textContent = description.value || ((i18n[currentLanguage()] || i18n.fr).noDescription);
+      document.getElementById("previewImages").textContent = selectedImages().length ? `${selectedImages().length} image(s) jointe(s)` : "Aucune image";
       formStep.hidden = true;
       previewStep.hidden = false;
     });
@@ -268,6 +363,7 @@
     });
 
     form.addEventListener("submit", async (event) => {
+      // Envoie le ticket au backend Symfony.
       event.preventDefault();
       emailFull.value = buildEmail();
       setCookie("emailPrefix", emailPrefix.value.toLowerCase());
@@ -275,8 +371,10 @@
 
       const response = await fetch("/api/tickets", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildTicket())
+        headers: {
+          "X-Device-Id": getDeviceId(),
+        },
+        body: buildTicketFormData()
       });
 
       const data = await response.json().catch(() => ({ message: "Erreur serveur." }));
@@ -298,10 +396,18 @@
         return;
       }
 
-      alert(data.message || "Erreur lors de l'envoi du ticket.");
+      showAppAlert(data.message || "Erreur lors de l'envoi du ticket.");
+    });
+
+    appAlertButton.addEventListener("click", hideAppAlert);
+    appAlert.addEventListener("click", (event) => {
+      if (event.target === appAlert) {
+        hideAppAlert();
+      }
     });
 
     downloadPdfButton.addEventListener("click", () => {
+      // Génère un petit PDF récapitulatif côté navigateur.
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       const problem = typePanne.value === "Autre" ? customPanne.value : typePanne.value;
@@ -321,6 +427,7 @@
     const savedEmailPrefix = getCookie("emailPrefix");
     const savedUserType = getCookie("userType");
 
+    // Pré-remplit l'email et le type utilisateur déjà utilisés sur ce navigateur.
     if (savedEmailPrefix) {
       emailPrefix.value = savedEmailPrefix.toLowerCase();
     }

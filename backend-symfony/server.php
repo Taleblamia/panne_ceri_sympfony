@@ -2,19 +2,20 @@
 
 namespace App\Controller;
 
-use App\Service\Database;
-use App\Service\GlpiTicketService;
-use App\Service\PcCatalog;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Address;
-use Symfony\Component\Mime\Email;
-use Symfony\Component\Routing\Attribute\Route;
+use App\Service\Database; // Service de gestion de la base de données SQLite
+use App\Service\GlpiTicketService; // Service de communication avec l'API GLPI pour créer les tickets
+use App\Service\PcCatalog; // Service pour gérer le catalogue des PC et leurs pannes associées
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController; // Contrôleur de base de Symfony pour gérer les requêtes HTTP
+use Symfony\Component\DependencyInjection\Attribute\Autowire; // Attribut pour injecter des paramètres de configuration dans le constructeur
+use Symfony\Component\HttpFoundation\JsonResponse; // Classe pour retourner des réponses JSON aux requêtes HTTP
+use Symfony\Component\HttpFoundation\Request; // Classe pour accéder aux données des requêtes HTTP
+use Symfony\Component\HttpFoundation\Response; // Classe pour retourner des réponses HTTP génériques
+use Symfony\Component\Mailer\MailerInterface; // Interface pour envoyer des emails via le composant Mailer de Symfony
+use Symfony\Component\Mime\Address; // Classe pour représenter une adresse email dans les messages envoyés avec le composant Mailer de Symfony
+use Symfony\Component\Mime\Email; // Classe pour créer des messages email avec le composant Mailer de Symfony
+use Symfony\Component\Routing\Attribute\Route; // Attribut pour définir les routes des méthodes du contrôleur
 
+// Contrôleur principal de l'application qui gère les différentes routes pour la création de tickets, la validation des emails, et les endpoints d'administration
 class ServerController extends AbstractController
 {
     public function __construct(
@@ -27,15 +28,19 @@ class ServerController extends AbstractController
         private readonly string $adminPassword,
         #[Autowire('%app.mail_from%')]
         private readonly string $mailFrom,
+        #[Autowire('%kernel.project_dir%')]
+        private readonly string $projectDir,
     ) {
     }
-
+    
+    // Route pour récupérer la liste des types de pannes disponibles
     #[Route('/api/pannes', methods: ['GET'])]
     public function pannes(): JsonResponse
     {
         return $this->json($this->pcCatalog->getPannes());
     }
 
+    // Route pour récupérer les détails d'un PC à partir de son ID ou de son token
     #[Route('/api/pcs/{id}', methods: ['GET'])]
     public function pc(string $id): JsonResponse
     {
@@ -48,12 +53,13 @@ class ServerController extends AbstractController
         return $this->json($pc);
     }
 
+    // Route pour créer un ticket de panne à partir des données envoyées dans la requête
     #[Route('/api/tickets', methods: ['POST'])]
     public function createTicket(
         Request $request,
         MailerInterface $mailer,
     ): JsonResponse {
-        $payload = json_decode($request->getContent(), true) ?: [];
+        $payload = $this->ticketPayload($request);
         $pc = $this->pcCatalog->findPcByIdOrToken((string) ($payload['pc_id'] ?? ''));
 
         if (!$pc) {
@@ -66,10 +72,17 @@ class ServerController extends AbstractController
             'type_panne' => (string) ($payload['type_panne'] ?? ''),
             'custom_panne' => $payload['custom_panne'] ?? null,
             'description' => $payload['description'] ?? null,
+            'image_paths' => json_encode($this->saveImages($request), JSON_UNESCAPED_SLASHES),
         ];
         $deviceFingerprint = $this->getDeviceFingerprint($request);
 
         $this->db->deleteExpiredPendingTickets();
+
+        if ($limitMessage = $this->dailyLimitMessage($payload['email'], $payload['pc_id'])) {
+            return $this->json([
+                'message' => $limitMessage,
+            ], Response::HTTP_CONFLICT);
+        }
 
         $verifiedUser = $this->db->findVerifiedUser($payload['email'], $deviceFingerprint);
 
@@ -89,8 +102,6 @@ class ServerController extends AbstractController
                 'message' => 'Un email de validation vous a été envoyé. Veuillez valider cet appareil dans les 30 minutes.',
             ], Response::HTTP_ACCEPTED);
         }
-
-        $this->db->deleteOldTickets();
 
         if ($this->db->findDuplicateTicket($payload['pc_id'], $payload['type_panne'], $payload['custom_panne'])) {
             return $this->json([
@@ -112,6 +123,7 @@ class ServerController extends AbstractController
         }
     }
 
+    // Route pour vérifier si un ticket peut être créé pour un PC donné sans créer de ticket (utilisé pour la validation côté client avant d'envoyer les données complètes)
     #[Route('/api/tickets/check', methods: ['POST'])]
     public function checkTicket(Request $request): JsonResponse
     {
@@ -122,7 +134,13 @@ class ServerController extends AbstractController
             return $this->json(['message' => 'PC introuvable'], Response::HTTP_NOT_FOUND);
         }
 
-        $this->db->deleteOldTickets();
+        $email = (string) ($payload['email'] ?? '');
+
+        if ($limitMessage = $this->dailyLimitMessage($email, $pc['id'])) {
+            return $this->json([
+                'message' => $limitMessage,
+            ], Response::HTTP_CONFLICT);
+        }
 
         if ($this->db->findDuplicateTicket($pc['id'], (string) ($payload['type_panne'] ?? ''), $payload['custom_panne'] ?? null)) {
             return $this->json([
@@ -133,6 +151,7 @@ class ServerController extends AbstractController
         return $this->json(['message' => 'OK']);
     }
 
+    // Route pour vérifier l'email et l'appareil à partir du token envoyé dans le lien de validation, puis créer le ticket dans GLPI si tout est valide
     #[Route('/api/verify-email/{token}', methods: ['GET'])]
     public function verifyEmail(string $token): Response
     {
@@ -144,6 +163,18 @@ class ServerController extends AbstractController
 
         $this->db->addVerifiedUser($pendingTicket['email'], $pendingTicket['device_fingerprint']);
 
+        if ($limitMessage = $this->dailyLimitMessage($pendingTicket['email'], $pendingTicket['pc_id'])) {
+            $this->db->deletePendingTicket($token);
+
+            return new Response($limitMessage);
+        }
+
+        if ($this->db->findDuplicateTicket($pendingTicket['pc_id'], $pendingTicket['type_panne'], $pendingTicket['custom_panne'])) {
+            $this->db->deletePendingTicket($token);
+
+            return new Response('Cette panne a déjà été signalée sur ce poste.');
+        }
+
         try {
             $this->createTicketInGlpiAndSave([
                 'pc_id' => $pendingTicket['pc_id'],
@@ -151,6 +182,7 @@ class ServerController extends AbstractController
                 'type_panne' => $pendingTicket['type_panne'],
                 'custom_panne' => $pendingTicket['custom_panne'],
                 'description' => $pendingTicket['description'],
+                'image_paths' => $pendingTicket['image_paths'] ?? '[]',
             ]);
 
             $this->db->deletePendingTicket($token);
@@ -161,6 +193,7 @@ class ServerController extends AbstractController
         }
     }
 
+    // Route pour récupérer la liste des salles (endpoint d'administration protégé par mot de passe)
     #[Route('/api/admin/salles', methods: ['GET'])]
     public function adminSalles(Request $request): JsonResponse
     {
@@ -171,6 +204,7 @@ class ServerController extends AbstractController
         return $this->json($this->pcCatalog->getSalles());
     }
 
+    // Route pour récupérer la liste des tickets (endpoint d'administration protégé par mot de passe)
     #[Route('/api/admin/tickets', methods: ['GET'])]
     public function adminTickets(Request $request): JsonResponse
     {
@@ -191,6 +225,7 @@ class ServerController extends AbstractController
         return $this->json($data);
     }
 
+    // Méthode privée pour créer un ticket dans GLPI et le sauvegarder dans la base de données locale
     private function createTicketInGlpiAndSave(array $payload): array
     {
         $glpiData = $this->glpiTicketService->createTicket($payload);
@@ -199,6 +234,72 @@ class ServerController extends AbstractController
         return $glpiData;
     }
 
+    // Méthode privée pour vérifier les limites de signalement par jour pour un email et un PC donnés, et retourner un message d'erreur approprié si la limite est atteinte
+    private function dailyLimitMessage(string $email, string $pcId): ?string
+    {
+        if ($this->db->hasTicketTodayByEmailAndPc($email, $pcId)) {
+            return 'Vous avez déjà déclaré une panne sur ce poste aujourd’hui.';
+        }
+
+        if ($this->db->countTicketsTodayByEmail($email) >= 2) {
+            return 'Vous avez atteint la limite de 2 signalements par jour.';
+        }
+
+        return null;
+    }
+
+    // Méthode privée pour extraire les données du ticket de la requête, en prenant en charge à la fois les requêtes JSON et les requêtes multipart/form-data (pour les images)
+    private function ticketPayload(Request $request): array
+    {
+        if (str_starts_with((string) $request->headers->get('Content-Type'), 'multipart/form-data')) {
+            return [
+                'pc_id' => $request->request->get('pc_id'),
+                'email' => $request->request->get('email'),
+                'type_panne' => $request->request->get('type_panne'),
+                'custom_panne' => $request->request->get('custom_panne'),
+                'description' => $request->request->get('description'),
+            ];
+        }
+
+        return json_decode($request->getContent(), true) ?: [];
+    }
+
+    // Méthode privée pour sauvegarder les images envoyées dans la requête, en les stockant dans le dossier public/uploads/tickets et en retournant les chemins d'accès relatifs à ces images
+    private function saveImages(Request $request): array
+    {
+        $images = $request->files->get('images', []);
+
+        if (!$images) {
+            return [];
+        }
+
+        if (!is_array($images)) {
+            $images = [$images];
+        }
+
+        $uploadDir = $this->projectDir.'/public/uploads/tickets';
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0775, true);
+        }
+
+        $paths = [];
+
+        foreach (array_slice($images, 0, 3) as $image) {
+            if (!$image || !str_starts_with((string) $image->getMimeType(), 'image/')) {
+                continue;
+            }
+
+            $extension = $image->guessExtension() ?: 'png';
+            $filename = bin2hex(random_bytes(16)).'.'.$extension;
+            $image->move($uploadDir, $filename);
+            $paths[] = '/uploads/tickets/'.$filename;
+        }
+
+        return $paths;
+    }
+
+    // Méthode privée pour envoyer un email de validation à l'utilisateur avec un lien contenant un token unique pour valider l'email et l'appareil avant de créer le ticket dans GLPI
     private function sendValidationEmail(MailerInterface $mailer, string $email, string $token): void
     {
         $validationLink = $this->backendUrl.'/api/verify-email/'.$token;
@@ -215,11 +316,19 @@ class ServerController extends AbstractController
         $mailer->send($message);
     }
 
+    // Méthode privée pour générer une empreinte de l'appareil à partir d'un identifiant unique envoyé dans les headers (X-Device-Id) ou, à défaut, à partir du user-agent, afin de limiter la création de tickets à partir du même appareil même si l'email est différent
     private function getDeviceFingerprint(Request $request): string
     {
+        $deviceId = trim((string) $request->headers->get('X-Device-Id', ''));
+
+        if ($deviceId !== '') {
+            return hash('sha256', $deviceId);
+        }
+
         return hash('sha256', $request->headers->get('user-agent', ''));
     }
 
+    // Méthode privée pour vérifier si la requête d'administration contient le mot de passe correct dans les headers (X-Admin-Password) pour autoriser l'accès aux endpoints d'administration
     private function isAdminRequest(Request $request): bool
     {
         return $request->headers->get('x-admin-password') === $this->adminPassword;

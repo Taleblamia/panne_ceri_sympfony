@@ -5,70 +5,101 @@
 {% block body %}
   <div class="report-page">
     <div class="report-card admin-card">
-      <button class="logout-icon" type="button" onclick="window.location.href='/'" data-i18n-title="logout" title="Déconnexion">
-        <i data-lucide="log-out" width="22" height="22"></i>
-      </button>
-
       <h1 data-i18n="adminTitle">Administration</h1>
 
       {% if tickets is null %}
         {% if error %}
-          <p style="color:red;font-weight:bold;text-align:center;">{{ error }}</p>
+          <p class="error-text">{{ error }}</p>
         {% endif %}
 
-        <form method="post">
+        <div class="admin-login-hero">
+          <div class="admin-shield">
+            <i data-lucide="shield-check" width="34" height="34"></i>
+          </div>
+          <h2>Administration</h2>
+          <p>Accès réservé au suivi des pannes déclarées au CERI.</p>
+        </div>
+
+        <form method="post" class="admin-login-form">
           <label>Mot de passe</label>
-          <input type="password" name="password" placeholder="Votre mot de passe" required>
+          <div class="password-field">
+            <i data-lucide="lock" width="20" height="20"></i>
+            <input type="password" name="password" placeholder="Votre mot de passe" required>
+          </div>
           <button class="primary-btn" type="submit">Entrer</button>
           <button type="button" class="secondary-btn full-btn" onclick="window.location.href='/'">Retour</button>
         </form>
       {% else %}
-        <div class="admin-layout">
-          <div class="admin-topbar">
-            <button type="button" class="active" data-section-button="liste" data-i18n-title="list" title="Liste des pannes">📋</button>
-            <button type="button" data-section-button="stats" data-i18n-title="stats" title="Statistiques">📊</button>
-            <button type="button" data-section-button="about" data-i18n-title="about" title="À propos">ℹ️</button>
+        <button class="logout-icon" type="button" onclick="window.location.href='/'" data-i18n-title="logout" title="Déconnexion">
+          <i data-lucide="log-out" width="22" height="22"></i>
+        </button>
+
+        <div class="admin-tabs">
+          <button type="button" class="active" data-section-button="liste">Tickets</button>
+          <button type="button" data-section-button="stats">Stats</button>
+          <button type="button" data-section-button="exports">Exports</button>
+        </div>
+
+        <section class="admin-content" id="sectionListe">
+          <div class="admin-summary">
+            <strong id="listCount">{{ tickets|length }}</strong>
+            <span data-i18n="total">Total des pannes déclarées</span>
           </div>
 
-          <div class="admin-content" id="sectionListe">
-            <div class="admin-summary"><span data-i18n="total">Total des pannes déclarées</span> : {{ tickets|length }}</div>
-
-            <label data-i18n="filterRoom">Filtrer par salle</label>
-            <input type="text" id="salleFilter" placeholder="Exemple : 128" data-i18n-placeholder="filterPlaceholder">
-
-            <div id="ticketsList"></div>
-          </div>
-
-          <div class="admin-content" id="sectionStats" hidden>
-            <h2 data-i18n="stats">Statistiques</h2>
-
-            <div class="stats-card">
-              <strong data-i18n="totalProblems">Nombre total de pannes</strong> : {{ tickets|length }}
-              <br>
-              <strong data-i18n="concernedRooms">Nombre de salles concernées</strong> : <span id="roomCount"></span>
-            </div>
-
-            <h3 data-i18n="problemsByRoom">Pannes par salle</h3>
-            <div class="chart-card">
-              <canvas id="roomChart"></canvas>
-            </div>
-
-            <h3 data-i18n="problemsByType">Pannes par type</h3>
-            <div class="chart-card">
-              <canvas id="typeChart"></canvas>
+          <div class="admin-filters">
+            <div class="admin-filter-row">
+              <div class="search-filter">
+                <label data-i18n="search">Rechercher</label>
+                <input type="text" id="adminSearch" placeholder="Email, poste, salle ou type de panne">
+              </div>
+              <div class="period-filter">
+                <label data-i18n="period">Période</label>
+                <select id="periodFilter">
+                  <option value="all" data-i18n="allPeriods">Toutes les périodes</option>
+                  <option value="today" data-i18n="today">Aujourd'hui</option>
+                  <option value="7" data-i18n="last7Days">7 derniers jours</option>
+                  <option value="30" data-i18n="last30Days">30 derniers jours</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div class="admin-content" id="sectionAbout" hidden>
-            <h2 data-i18n="about">À propos</h2>
-            <div class="pc-info-card" data-i18n="aboutText">Cette interface admin permet de consulter les pannes déclarées, filtrer par salle et suivre les signalements.</div>
+          <div id="ticketsList" class="compact-ticket-list"></div>
+        </section>
+
+        <section class="admin-content" id="sectionStats" hidden>
+          <h2 data-i18n="stats">Statistiques</h2>
+
+          <h3 data-i18n="problemsByRoom">Pannes par salle</h3>
+          <div class="chart-card">
+            <canvas id="roomChart"></canvas>
           </div>
 
-          <div class="admin-content" id="sectionDetail" hidden>
-            <button class="secondary-btn full-btn" type="button" id="backToList" data-i18n="back">Retour</button>
-            <h1 data-i18n="detailTitle">Détail de la panne</h1>
-            <div class="pc-info-card" id="ticketDetail"></div>
+          <h3 data-i18n="problemsByType">Pannes par type</h3>
+          <div class="chart-card">
+            <canvas id="typeChart"></canvas>
           </div>
+        </section>
+
+        <section class="admin-content" id="sectionExports" hidden>
+          <h2>Exports</h2>
+          <div class="export-actions">
+            <button class="secondary-btn full-btn" type="button" id="exportCsv" data-i18n="exportCsv">Exporter CSV</button>
+            <button class="secondary-btn full-btn" type="button" id="exportPdf" data-i18n="exportPdf">Exporter PDF</button>
+          </div>
+        </section>
+
+        <div class="detail-modal" id="ticketModal" hidden>
+          <div class="detail-panel">
+            <button class="modal-close" type="button" id="closeTicketModal" aria-label="Fermer">×</button>
+            <h2 data-i18n="detailTitle">Détail de la panne</h2>
+            <div id="ticketDetail"></div>
+          </div>
+        </div>
+
+        <div class="image-modal" id="adminImageModal" hidden>
+          <button class="image-modal-close" type="button" id="closeAdminImage" aria-label="Fermer">×</button>
+          <img id="adminImagePreview" alt="Image jointe agrandie">
         </div>
       {% endif %}
     </div>
@@ -79,24 +110,68 @@
   {% if tickets is not null %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-      const tickets = {{ tickets|json_encode|raw }};
-      const ticketsList = document.getElementById("ticketsList");
-      const salleFilter = document.getElementById("salleFilter");
+      const tickets = {{ tickets|json_encode|raw }}; // Rendre les tickets disponibles dans le JavaScript
+      const ticketsList = document.getElementById("ticketsList"); // Conteneur de la liste des tickets
+      const adminSearch = document.getElementById("adminSearch"); // Champ de recherche
+      const periodFilter = document.getElementById("periodFilter"); // Filtre de période
+      const listCount = document.getElementById("listCount"); // Affichage du nombre de tickets
+      const modal = document.getElementById("ticketModal"); // Modal de détail du ticket
+      const detail = document.getElementById("ticketDetail"); // Contenu du détail du ticket
+      const imageModal = document.getElementById("adminImageModal"); // Modal d'affichage des images
+      const imagePreview = document.getElementById("adminImagePreview"); // Image dans le modal d'affichage des images
+      let roomChartInstance = null; // Instance du graphique des salles
+      let typeChartInstance = null; // Instance du graphique des types de pannes
+      // Sections de l'interface d'administration
       const sections = {
         liste: document.getElementById("sectionListe"),
         stats: document.getElementById("sectionStats"),
-        about: document.getElementById("sectionAbout"),
-        detail: document.getElementById("sectionDetail"),
+        exports: document.getElementById("sectionExports"),
       };
 
+      // Fonction de traduction
       function t(key) {
         return (i18n[currentLanguage()] || i18n.fr)[key] || key;
       }
-
+      // Fonction pour obtenir le libellé du problème
       function problemLabel(ticket) {
         return ticket.type_panne === "Autre" ? (ticket.custom_panne || "Autre") : ticket.type_panne;
       }
+      // Fonction pour convertir la date de création du ticket en objet Date
+      function ticketDate(ticket) {
+        return new Date(String(ticket.created_at || "").replace(" ", "T"));
+      }
+      // Fonction pour extraire les chemins d'images du ticket
+      function images(ticket) {
+        try {
+          return JSON.parse(ticket.image_paths || "[]");
+        } catch {
+          return [];
+        }
+      }
+      // Fonction pour créer une ligne de détail dans le modal de ticket
+      function detailRow(label, value) {
+        return `<div class="detail-row"><span>${label}</span><strong>${value}</strong></div>`;
+      }
 
+      // Fonction pour créer la galerie d'images dans le modal de ticket
+      function imageGallery(ticket) {
+        const paths = images(ticket);
+
+        if (!paths.length) {
+          return "";
+        }
+
+        return `
+          <div class="detail-images">
+            <span>Images jointes</span>
+            <div>
+              ${paths.map((path) => `<button type="button" class="image-thumb" data-image-src="${path}"><img src="${path}" alt="Image jointe"></button>`).join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      // Fonction pour afficher une section
       function showSection(name) {
         Object.values(sections).forEach((section) => section.hidden = true);
         sections[name].hidden = false;
@@ -104,80 +179,201 @@
           button.classList.toggle("active", button.dataset.sectionButton === name);
         });
       }
+      // Fonction pour filtrer les tickets selon la période sélectionnée
+      function matchPeriod(ticket) {
+        const value = periodFilter.value;
+        if (value === "all") return true;
 
+        const date = ticketDate(ticket);
+        if (Number.isNaN(date.getTime())) return false;
+
+        const now = new Date();
+        if (value === "today") {
+          return date.toDateString() === now.toDateString();
+        }
+
+        const days = Number(value);
+        return date >= new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      }
+
+      // Fonction pour filtrer les tickets selon la recherche et la période
+      function filteredTickets() {
+        const search = adminSearch.value.trim().toLowerCase();
+
+        return tickets.filter((ticket) => [
+          ticket.email,
+          ticket.pc_id,
+          ticket.salle,
+          ticket.poste,
+          problemLabel(ticket),
+        ].some((value) => String(value || "").toLowerCase().includes(search)))
+          .filter(matchPeriod);
+      }
+
+      // Affiche la liste compacte des tickets filtrés.
       function renderTickets() {
-        const filter = salleFilter.value.trim();
-        const filtered = filter ? tickets.filter((ticket) => String(ticket.salle) === filter) : tickets;
+        const items = filteredTickets();
+        listCount.textContent = items.length;
 
-        ticketsList.innerHTML = filtered.map((ticket) => `
-          <div class="pc-info-card">
-            <strong>${t("pc")} :</strong> ${ticket.pc_id}<br>
-            <strong>${t("room")} :</strong> ${ticket.salle}<br>
-            <strong>${t("computer")} :</strong> ${ticket.poste}<br>
-            <strong>${t("email")} :</strong> ${ticket.email}<br>
-            <strong>${t("problem")} :</strong> ${problemLabel(ticket)}<br>
-            <strong>${t("descriptionLabel")} :</strong> ${ticket.description || t("noDescription")}
-            <button class="primary-btn" type="button" data-ticket-id="${ticket.id}">${t("details")}</button>
-          </div>
-        `).join("");
+        ticketsList.innerHTML = items.map((ticket) => `
+          <article class="compact-ticket">
+            <div>
+              <strong>${ticket.pc_id}</strong>
+              <span>${problemLabel(ticket)}</span>
+            </div>
+            <small>${t("room")} ${ticket.salle} - ${t("computer")} ${ticket.poste}</small>
+            <button class="primary-btn mini-detail-btn" type="button" data-ticket-id="${ticket.id}">${t("details")}</button>
+          </article>
+        `).join("") || `<p class="empty-state">${t("noReports")}</p>`;
 
         document.querySelectorAll("[data-ticket-id]").forEach((button) => {
           button.addEventListener("click", () => showTicketDetail(button.dataset.ticketId));
         });
       }
-
+      // Fonction pour afficher le détail d'un ticket dans un modal
       function showTicketDetail(id) {
         const ticket = tickets.find((item) => String(item.id) === String(id));
         if (!ticket) return;
 
-        document.getElementById("ticketDetail").innerHTML = `
-          <strong>${t("pc")} :</strong> ${ticket.pc_id}<br>
-          <strong>${t("room")} :</strong> ${ticket.salle}<br>
-          <strong>${t("computer")} :</strong> ${ticket.poste}<br>
-          <strong>${t("email")} :</strong> ${ticket.email}<br>
-          <strong>${t("problem")} :</strong> ${problemLabel(ticket)}<br>
-          <strong>${t("descriptionLabel")} :</strong> ${ticket.description || t("noDescription")}<br>
-          <strong>Date :</strong> ${ticket.created_at}
+        detail.innerHTML = `
+          <div class="ticket-detail-grid">
+            ${detailRow(t("pc"), ticket.pc_id)}
+            ${detailRow(t("room"), ticket.salle)}
+            ${detailRow(t("computer"), ticket.poste)}
+            ${detailRow(t("email"), ticket.email)}
+            ${detailRow(t("problem"), problemLabel(ticket))}
+            ${detailRow(t("descriptionLabel"), ticket.description || t("noDescription"))}
+            ${detailRow("Date", ticket.created_at)}
+          </div>
+          ${imageGallery(ticket)}
         `;
-        showSection("detail");
+        modal.hidden = false;
+        detail.querySelectorAll("[data-image-src]").forEach((button) => {
+          button.addEventListener("click", () => {
+            imagePreview.src = button.dataset.imageSrc;
+            imageModal.hidden = false;
+          });
+        });
       }
 
+      // Fonction pour regrouper les tickets par une clé donnée (salle ou type de panne)
       function groupedBy(keyFn) {
-        return tickets.reduce((acc, ticket) => {
+        return filteredTickets().reduce((acc, ticket) => {
           const key = keyFn(ticket);
           acc[key] = (acc[key] || 0) + 1;
           return acc;
         }, {});
       }
 
+      // Fonction pour mettre à jour les graphiques de statistiques
+      function updateStats() {
+        const rooms = groupedBy((ticket) => ticket.salle || "Inconnue");
+        const types = groupedBy(problemLabel);
+
+        if (roomChartInstance) roomChartInstance.destroy();
+        if (typeChartInstance) typeChartInstance.destroy();
+
+        roomChartInstance = new Chart(document.getElementById("roomChart"), {
+          type: "bar",
+          data: {
+            labels: Object.keys(rooms).map((room) => `${t("room")} ${room}`),
+            datasets: [{ label: "Nombre de pannes", data: Object.values(rooms), backgroundColor: "#073bb8", borderRadius: 7 }]
+          },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+          }
+        });
+
+        typeChartInstance = new Chart(document.getElementById("typeChart"), {
+          type: "doughnut",
+          data: {
+            labels: Object.keys(types),
+            datasets: [{ data: Object.values(types), backgroundColor: ["#073bb8", "#f97316", "#22c55e", "#ef4444", "#a855f7", "#14b8a6"] }]
+          }
+        });
+      }
+
+      // Fonction principale pour rendre l'interface d'administration
+      function renderAdmin() {
+        renderTickets();
+        updateStats();
+      }
+
+      // Fonction pour exporter les tickets en CSV
+      function exportCsv() {
+        const rows = [["PC", "Salle", "Poste", "Email", "Panne", "Description", "Date"]];
+        filteredTickets().forEach((ticket) => rows.push([
+          ticket.pc_id,
+          ticket.salle,
+          ticket.poste,
+          ticket.email,
+          problemLabel(ticket),
+          ticket.description || t("noDescription"),
+          ticket.created_at,
+        ]));
+
+        const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "tickets-pannes.csv";
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
+
+      // Fonction pour exporter les tickets en PDF
+      function exportPdf() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        let y = 20;
+
+        doc.setFontSize(16);
+        doc.text("Tickets pannes CERI", 20, y);
+        y += 12;
+        doc.setFontSize(10);
+
+        filteredTickets().forEach((ticket) => {
+          if (y > 275) {
+            doc.addPage();
+            y = 20;
+          }
+
+          doc.text(`${ticket.pc_id} - Salle ${ticket.salle} - Poste ${ticket.poste}`, 20, y);
+          y += 6;
+          doc.text(`${ticket.email} - ${problemLabel(ticket)}`, 20, y);
+          y += 8;
+        });
+
+        doc.save("tickets-pannes.pdf");
+      }
+
+      // Initialisation des événements et rendu initial
       document.querySelectorAll("[data-section-button]").forEach((button) => {
         button.addEventListener("click", () => showSection(button.dataset.sectionButton));
       });
 
-      document.getElementById("backToList").addEventListener("click", () => showSection("liste"));
-      salleFilter.addEventListener("input", renderTickets);
-
-      const rooms = groupedBy((ticket) => ticket.salle || "Inconnue");
-      const types = groupedBy(problemLabel);
-      document.getElementById("roomCount").textContent = Object.keys(rooms).length;
-
-      new Chart(document.getElementById("roomChart"), {
-        type: "bar",
-        data: {
-          labels: Object.keys(rooms).map((room) => `${t("room")} ${room}`),
-          datasets: [{ label: "Nombre de pannes", data: Object.values(rooms), backgroundColor: "#003bba", borderRadius: 8 }]
+      // Fermer les modals
+      document.getElementById("closeTicketModal").addEventListener("click", () => modal.hidden = true);
+      document.getElementById("closeAdminImage").addEventListener("click", () => {
+        imageModal.hidden = true;
+        imagePreview.removeAttribute("src");
+      });
+      // Fermer le modal d'image en cliquant en dehors de l'image
+      imageModal.addEventListener("click", (event) => {
+        if (event.target === imageModal) {
+          imageModal.hidden = true;
+          imagePreview.removeAttribute("src");
         }
       });
-
-      new Chart(document.getElementById("typeChart"), {
-        type: "doughnut",
-        data: {
-          labels: Object.keys(types),
-          datasets: [{ data: Object.values(types), backgroundColor: ["#003bba", "#f97316", "#22c55e", "#ef4444", "#a855f7", "#14b8a6"] }]
-        }
+      [adminSearch, periodFilter].forEach((control) => {
+        control.addEventListener("input", renderAdmin);
+        control.addEventListener("change", renderAdmin);
       });
+      document.getElementById("exportCsv").addEventListener("click", exportCsv);
+      document.getElementById("exportPdf").addEventListener("click", exportPdf);
 
-      renderTickets();
+      renderAdmin();
       applyLanguage();
       if (window.lucide) {
         lucide.createIcons();

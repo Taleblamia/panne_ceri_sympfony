@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#073bb8">
     <title>{% block title %}Ticket Panne CERI{% endblock %}</title>
+    {# Déclaration PWA : permet au navigateur de reconnaître l'application comme installable. #}
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/icon-512.png" type="image/png">
+    <link rel="apple-touch-icon" href="/icon-512.png">
     <link rel="stylesheet" href="/app.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -12,6 +17,7 @@
   <body class="light">
     {% block body %}{% endblock %}
     <script>
+      // Textes utilisés pour le changement de langue français/anglais.
       const i18n = {
         fr: {
           title: "Ticket Panne CERI",
@@ -21,6 +27,7 @@
           placeholder: "Exemple : mc128-24",
           continue: "Continuer",
           language: "Passer en anglais",
+          myReports: "Mes signalements",
           admin: "Espace admin",
           enterCode: "Veuillez entrer un code poste",
           titleReport: "Déclaration de panne",
@@ -69,6 +76,20 @@
           problemsByRoom: "Pannes par salle",
           problemsByType: "Pannes par type",
           aboutText: "Cette interface admin permet de consulter les pannes déclarées, filtrer par salle et suivre les signalements."
+          ,
+          search: "Rechercher",
+          searchReports: "Rechercher mes signalements",
+          reportsFound: "signalement(s) trouvé(s)",
+          noReports: "Aucun signalement trouvé pour cette adresse.",
+          exportCsv: "Exporter CSV",
+          exportPdf: "Exporter PDF",
+          period: "Période",
+          allPeriods: "Toutes les périodes",
+          today: "Aujourd'hui",
+          last7Days: "7 derniers jours",
+          last30Days: "30 derniers jours",
+          allRooms: "Toutes",
+          allTypes: "Tous"
         },
         en: {
           title: "CERI Failure Ticket",
@@ -78,6 +99,7 @@
           placeholder: "Example: mc128-24",
           continue: "Continue",
           language: "Switch to French",
+          myReports: "My reports",
           admin: "Admin area",
           enterCode: "Please enter a workstation code",
           titleReport: "Report a problem",
@@ -125,11 +147,25 @@
           concernedRooms: "Number of concerned rooms",
           problemsByRoom: "Problems by room",
           problemsByType: "Problems by type",
-          aboutText: "This admin interface lets you view reported problems, filter by room and track reports."
+          aboutText: "This admin interface lets you view reported problems, filter by room and track reports.",
+          search: "Search",
+          searchReports: "Search my reports",
+          reportsFound: "report(s) found",
+          noReports: "No report found for this address.",
+          exportCsv: "Export CSV",
+          exportPdf: "Export PDF",
+          period: "Period",
+          allPeriods: "All periods",
+          today: "Today",
+          last7Days: "Last 7 days",
+          last30Days: "Last 30 days",
+          allRooms: "All",
+          allTypes: "All"
         }
       };
 
       function getCookie(name) {
+        // Récupère une valeur sauvegardée dans les cookies du navigateur.
         const cookies = document.cookie.split(";");
 
         for (const cookie of cookies) {
@@ -144,14 +180,17 @@
       }
 
       function setCookie(name, value) {
+        // Sauvegarde une valeur pendant un an, utilisée pour mémoriser l'email.
         document.cookie = `${name}=${encodeURIComponent(value)}; max-age=31536000; path=/`;
       }
 
       function currentLanguage() {
+        // Langue choisie par l'utilisateur, français par défaut.
         return localStorage.getItem("language") || "fr";
       }
 
       function applyLanguage() {
+        // Remplace les textes de la page selon la langue choisie.
         const t = i18n[currentLanguage()] || i18n.fr;
         document.querySelectorAll("[data-i18n]").forEach((node) => {
           node.textContent = t[node.dataset.i18n] || node.textContent;
@@ -165,17 +204,26 @@
       }
 
       function initTheme() {
+        // Recharge le mode sombre ou clair sauvegardé dans le navigateur.
         const darkMode = localStorage.getItem("darkMode") === "true";
         document.body.className = darkMode ? "dark" : "light";
       }
 
       document.addEventListener("DOMContentLoaded", () => {
+        // Initialise la langue, le thème et les icônes au chargement de la page.
         initTheme();
         applyLanguage();
         if (window.lucide) {
           lucide.createIcons();
         }
       });
+
+      if ("serviceWorker" in navigator) {
+        // Enregistre le service worker utilisé par la PWA.
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").catch(() => {});
+        });
+      }
     </script>
     {% block scripts %}{% endblock %}
   </body>

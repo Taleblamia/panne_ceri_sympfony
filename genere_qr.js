@@ -4,34 +4,42 @@ const crypto = require("crypto");
 const QRCode = require("qrcode");
 const sharp = require("sharp");
 
+// Fichier contenant la liste des postes et leurs tokens QR code.
 const pcsPath = path.join(__dirname, "backend-symfony/data/pcs.json");
 let pcs = require(pcsPath);
 
-const FRONT_URL = process.env.FRONT_URL || "http://10.188.74.8:8000";
+// Adresse de l'application utilisée dans les QR codes.
+// Elle peut être changée avec FRONT_URL=... node genere_qr.js
+const FRONT_URL = process.env.FRONT_URL || "http://10.120.2.212:8001";
+
+// Dossier où les images QR codes sont générées.
 const outputDir = path.join(__dirname, "qr_codes");
 
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir);
 }
 
-// ajouter un token à chaque PC s'il n'existe pas encore
+// Ajoute un token unique à chaque PC s'il n'existe pas encore.
 pcs = pcs.map((pc) => ({
   ...pc,
   token: pc.token || crypto.randomBytes(32).toString("hex"),
 }));
 
-// sauvegarder pcs.json avec les tokens
+// Sauvegarde pcs.json avec les tokens générés.
 fs.writeFileSync(pcsPath, JSON.stringify(pcs, null, 2));
 
 pcs.forEach(async (pc) => {
+  // Le QR code pointe vers le formulaire du poste avec son token.
   const url = `${FRONT_URL}/report/${pc.token}`;
   const filePath = path.join(outputDir, `${pc.id}.png`);
 
+  // Génère l'image du QR code.
   const qrBuffer = await QRCode.toBuffer(url, {
     width: 500,
     margin: 2,
   });
 
+  // Ajoute le nom du poste et la salle sous le QR code.
   const svgText = `
     <svg width="500" height="120">
       <rect width="500" height="120" fill="white"/>
@@ -46,6 +54,7 @@ pcs.forEach(async (pc) => {
 
   const textBuffer = Buffer.from(svgText);
 
+  // Assemble QR code + texte dans une seule image PNG.
   await sharp({
     create: {
       width: 500,
