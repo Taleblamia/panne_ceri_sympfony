@@ -1138,6 +1138,88 @@ textarea {
 
 .export-actions {
   margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.export-header {
+  margin: 8px 0 18px;
+}
+
+.export-header h2 {
+  color: #002b8f;
+  font-size: 18px;
+  margin: 0 0 8px;
+  text-align: left;
+}
+
+.export-header p {
+  color: #33405f;
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.export-card {
+  width: 100%;
+  border: 1px solid #dbe7ff;
+  background: #f8fbff;
+  border-radius: 12px;
+  padding: 13px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+  color: #002b8f;
+}
+
+.export-card:hover {
+  border-color: #9bbcff;
+  background: #eef5ff;
+}
+
+.export-file-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.export-file-csv {
+  background: #16a34a;
+}
+
+.export-file-pdf {
+  background: #dc2626;
+}
+
+.export-text {
+  min-width: 0;
+}
+
+.export-text strong {
+  display: block;
+  color: #002b8f;
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+
+.export-text small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.export-download-icon {
+  color: #003bba;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Page Mes signalements */

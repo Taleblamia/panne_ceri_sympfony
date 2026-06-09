@@ -202,6 +202,7 @@
     const descriptionCount = document.getElementById("descriptionCount");
     const ticketImages = document.getElementById("ticketImages");
     const previewBackButton = document.getElementById("previewBackButton");
+    const pcInfo = document.getElementById("pcInfo");
     const appAlert = document.getElementById("appAlert");
     const appAlertTitle = document.getElementById("appAlertTitle");
     const appAlertMessage = document.getElementById("appAlertMessage");
@@ -349,16 +350,19 @@
       document.getElementById("previewDescription").textContent = description.value || ((i18n[currentLanguage()] || i18n.fr).noDescription);
       document.getElementById("previewImages").textContent = selectedImages().length ? `${selectedImages().length} image(s) jointe(s)` : "Aucune image";
       formStep.hidden = true;
+      pcInfo.hidden = true;
       previewStep.hidden = false;
     });
 
     editButton.addEventListener("click", () => {
       previewStep.hidden = true;
+      pcInfo.hidden = false;
       formStep.hidden = false;
     });
 
     previewBackButton.addEventListener("click", () => {
       previewStep.hidden = true;
+      pcInfo.hidden = false;
       formStep.hidden = false;
     });
 
@@ -381,7 +385,7 @@
 
       if (response.status === 202) {
         form.hidden = true;
-        document.getElementById("pcInfo").hidden = true;
+        pcInfo.hidden = true;
         document.getElementById("sentEmail").textContent = buildEmail();
         waitingValidationStep.hidden = false;
         applyLanguage();
@@ -390,7 +394,7 @@
 
       if (response.status === 201) {
         form.hidden = true;
-        document.getElementById("pcInfo").hidden = true;
+        pcInfo.hidden = true;
         confirmedStep.hidden = false;
         applyLanguage();
         return;

@@ -82,10 +82,37 @@
         </section>
 
         <section class="admin-content" id="sectionExports" hidden>
-          <h2>Exports</h2>
+          <div class="export-header">
+            <h2>Exporter les données</h2>
+            <p>Télécharger les données des tickets.</p>
+          </div>
+
           <div class="export-actions">
-            <button class="secondary-btn full-btn" type="button" id="exportCsv" data-i18n="exportCsv">Exporter CSV</button>
-            <button class="secondary-btn full-btn" type="button" id="exportPdf" data-i18n="exportPdf">Exporter PDF</button>
+            <button class="export-card" type="button" id="exportCsv">
+              <span class="export-file-icon export-file-csv">
+                <i data-lucide="file-spreadsheet" width="22" height="22"></i>
+              </span>
+              <span class="export-text">
+                <strong>Export CSV</strong>
+                <small>Fichier CSV tableur</small>
+              </span>
+              <span class="export-download-icon">
+                <i data-lucide="download" width="22" height="22"></i>
+              </span>
+            </button>
+
+            <button class="export-card" type="button" id="exportPdf">
+              <span class="export-file-icon export-file-pdf">
+                <i data-lucide="file-text" width="22" height="22"></i>
+              </span>
+              <span class="export-text">
+                <strong>Export PDF</strong>
+                <small>Rapport PDF</small>
+              </span>
+              <span class="export-download-icon">
+                <i data-lucide="download" width="22" height="22"></i>
+              </span>
+            </button>
           </div>
         </section>
 
