@@ -11,10 +11,35 @@
           <i data-lucide="menu" width="28" height="28"></i>
         </button>
 
+        <div class="menu-overlay" id="menuOverlay" hidden></div>
         <div class="home-menu" id="homeMenu" hidden>
-          <button type="button" id="languageButton">🌐 Passer en anglais</button>
-          <button type="button" id="themeButton">🌙 Mode sombre</button>
-          <button type="button" id="myReportsButton">📋 Mes signalements</button>
+          <div class="menu-head">
+            <strong>Ticket<span>Panne</span></strong>
+            <button type="button" id="closeMenuButton" aria-label="Fermer le menu">×</button>
+          </div>
+
+          <button type="button" class="menu-item" onclick="window.location.href='/'">
+            <i data-lucide="home" width="25" height="25"></i>
+            <span>Accueil</span>
+          </button>
+          <button type="button" class="menu-item" id="languageButton">
+            <i data-lucide="globe" width="25" height="25"></i>
+            <span id="languageText">Passer en anglais</span>
+          </button>
+          <button type="button" class="menu-item" id="myReportsButton">
+            <i data-lucide="clipboard-list" width="25" height="25"></i>
+            <span id="myReportsText">Mes signalements</span>
+          </button>
+
+          <div class="menu-separator"></div>
+
+          <button type="button" class="menu-item theme-row" id="themeButton">
+            <span class="theme-label">
+              <i data-lucide="moon" width="25" height="25"></i>
+              <span id="themeLabel">Thème sombre</span>
+            </span>
+            <span class="theme-switch" id="themeSwitch" aria-hidden="true"></span>
+          </button>
         </div>
 
         <i class="pc-logo" data-lucide="monitor" width="82" height="82"></i>
@@ -64,9 +89,15 @@
     const reader = document.getElementById("reader");
     const menuButton = document.getElementById("menuButton");
     const homeMenu = document.getElementById("homeMenu");
+    const menuOverlay = document.getElementById("menuOverlay");
+    const closeMenuButton = document.getElementById("closeMenuButton");
     const languageButton = document.getElementById("languageButton");
     const themeButton = document.getElementById("themeButton");
+    const languageText = document.getElementById("languageText");
+    const themeLabel = document.getElementById("themeLabel");
+    const themeSwitch = document.getElementById("themeSwitch");
     const myReportsButton = document.getElementById("myReportsButton");
+    const myReportsText = document.getElementById("myReportsText");
     const appDialog = document.getElementById("appDialog");
     const dialogTitle = document.getElementById("dialogTitle");
     const dialogMessage = document.getElementById("dialogMessage");
@@ -79,10 +110,10 @@
         scan: "Scanner un QR code",
         manualInfo: "Vous pouvez aussi saisir le code du poste si le QR code ne fonctionne pas.",
         continue: "Continuer",
-        language: "🌐 Passer en anglais",
-        dark: "🌙 Mode sombre",
-        light: "☀️ Mode clair",
-        myReports: "📋 Mes signalements",
+        language: "Passer en anglais",
+        dark: "Thème sombre",
+        light: "Thème clair",
+        myReports: "Mes signalements",
         missingCode: "Veuillez entrer un code poste.",
         pcNotFound: "PC introuvable. Veuillez vérifier le code du poste.",
       },
@@ -92,10 +123,10 @@
         scan: "Scan a QR code",
         manualInfo: "You can also enter the workstation code if the QR code does not work.",
         continue: "Continue",
-        language: "🌐 Switch to French",
-        dark: "🌙 Dark mode",
-        light: "☀️ Light mode",
-        myReports: "📋 My reports",
+        language: "Switch to French",
+        dark: "Dark theme",
+        light: "Light theme",
+        myReports: "My reports",
         missingCode: "Please enter a workstation code.",
         pcNotFound: "PC not found. Please check the workstation code.",
       },
@@ -117,9 +148,10 @@
         element.textContent = texts[element.dataset.i18n];
       });
 
-      languageButton.textContent = texts.language;
-      myReportsButton.textContent = texts.myReports;
-      themeButton.textContent = document.body.classList.contains("dark-mode") ? texts.light : texts.dark;
+      languageText.textContent = texts.language;
+      myReportsText.textContent = texts.myReports;
+      themeLabel.textContent = document.body.classList.contains("dark-mode") ? texts.light : texts.dark;
+      themeSwitch.classList.toggle("active", document.body.classList.contains("dark-mode"));
     }
 
     function buildSavedEmail() {
@@ -135,18 +167,27 @@
       document.body.classList.add("dark-mode");
     }
 
-    menuButton.addEventListener("click", (event) => {
-      event.stopPropagation();
-      homeMenu.hidden = !homeMenu.hidden;
-    });
+    function openMenu() {
+      homeMenu.hidden = false;
+      menuOverlay.hidden = false;
+      requestAnimationFrame(() => {
+        homeMenu.classList.add("open");
+        menuOverlay.classList.add("open");
+      });
+    }
 
-    homeMenu.addEventListener("click", (event) => {
-      event.stopPropagation();
-    });
+    function closeMenu() {
+      homeMenu.classList.remove("open");
+      menuOverlay.classList.remove("open");
+      setTimeout(() => {
+        homeMenu.hidden = true;
+        menuOverlay.hidden = true;
+      }, 180);
+    }
 
-    document.addEventListener("click", () => {
-      homeMenu.hidden = true;
-    });
+    menuButton.addEventListener("click", openMenu);
+    closeMenuButton.addEventListener("click", closeMenu);
+    menuOverlay.addEventListener("click", closeMenu);
 
     languageButton.addEventListener("click", () => {
       currentLanguage = currentLanguage === "fr" ? "en" : "fr";
@@ -163,6 +204,10 @@
     myReportsButton.addEventListener("click", () => {
       const email = buildSavedEmail();
       window.location.href = email ? `/mes-signalements?email=${encodeURIComponent(email)}` : "/mes-signalements";
+    });
+
+    pcInput.addEventListener("input", () => {
+      pcInput.value = pcInput.value.toLowerCase();
     });
 
     dialogButton.addEventListener("click", () => {
