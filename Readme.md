@@ -57,10 +57,9 @@ L'objectif de cette application est de simplifier ce signalement :
 - Création automatique d'un ticket dans GLPI.
 - Ajout de plusieurs images jointes, maximum 3.
 - Visualisation des images dans l'espace admin et dans `Mes signalements`.
-- Blocage des doublons : même panne sur le même poste pendant 24h.
 - Limite de signalements :
   - maximum 2 signalements par utilisateur et par jour ;
-  - maximum 1 signalement par utilisateur sur le même poste et par jour.
+  - maximum 1 signalement par poste et par jour, quelle que soit la panne.
 - Page `Mes signalements`.
 - Espace administration protégé par mot de passe.
 - Recherche admin par email, poste, salle ou type de panne.
@@ -203,6 +202,27 @@ Exemple :
 
 ```text
 http://10.120.2.212:8001
+```
+
+### Accès administrateur
+
+Le bouton administrateur n'est pas affiché dans l'application destinée aux utilisateurs.
+L'accès se fait uniquement avec l'URL directe :
+
+```text
+http://localhost:8001/admin
+```
+
+ou depuis un autre appareil sur le même réseau :
+
+```text
+http://ADRESSE_IP_DU_PC:8001/admin
+```
+
+Exemple :
+
+```text
+http://10.120.2.212:8001/admin
 ```
 
 ---

@@ -78,9 +78,15 @@ class ServerController extends AbstractController
 
         $this->db->deleteExpiredPendingTickets();
 
-        if ($limitMessage = $this->dailyLimitMessage($payload['email'], $payload['pc_id'])) {
+        if ($limitMessage = $this->dailyLimitMessage($payload['email'])) {
             return $this->json([
                 'message' => $limitMessage,
+            ], Response::HTTP_CONFLICT);
+        }
+
+        if ($this->db->findDuplicateTicket($payload['pc_id'])) {
+            return $this->json([
+                'message' => 'Un signalement a déjà été créé pour ce poste aujourd’hui.',
             ], Response::HTTP_CONFLICT);
         }
 
@@ -101,12 +107,6 @@ class ServerController extends AbstractController
             return $this->json([
                 'message' => 'Un email de validation vous a été envoyé. Veuillez valider cet appareil dans les 30 minutes.',
             ], Response::HTTP_ACCEPTED);
-        }
-
-        if ($this->db->findDuplicateTicket($payload['pc_id'], $payload['type_panne'], $payload['custom_panne'])) {
-            return $this->json([
-                'message' => 'Cette panne a déjà été signalée sur ce poste.',
-            ], Response::HTTP_CONFLICT);
         }
 
         try {
@@ -136,15 +136,15 @@ class ServerController extends AbstractController
 
         $email = (string) ($payload['email'] ?? '');
 
-        if ($limitMessage = $this->dailyLimitMessage($email, $pc['id'])) {
+        if ($limitMessage = $this->dailyLimitMessage($email)) {
             return $this->json([
                 'message' => $limitMessage,
             ], Response::HTTP_CONFLICT);
         }
 
-        if ($this->db->findDuplicateTicket($pc['id'], (string) ($payload['type_panne'] ?? ''), $payload['custom_panne'] ?? null)) {
+        if ($this->db->findDuplicateTicket($pc['id'])) {
             return $this->json([
-                'message' => 'Cette panne a déjà été signalée sur ce poste.',
+                'message' => 'Un signalement a déjà été créé pour ce poste aujourd’hui.',
             ], Response::HTTP_CONFLICT);
         }
 
@@ -163,16 +163,16 @@ class ServerController extends AbstractController
 
         $this->db->addVerifiedUser($pendingTicket['email'], $pendingTicket['device_fingerprint']);
 
-        if ($limitMessage = $this->dailyLimitMessage($pendingTicket['email'], $pendingTicket['pc_id'])) {
+        if ($limitMessage = $this->dailyLimitMessage($pendingTicket['email'])) {
             $this->db->deletePendingTicket($token);
 
             return new Response($limitMessage);
         }
 
-        if ($this->db->findDuplicateTicket($pendingTicket['pc_id'], $pendingTicket['type_panne'], $pendingTicket['custom_panne'])) {
+        if ($this->db->findDuplicateTicket($pendingTicket['pc_id'])) {
             $this->db->deletePendingTicket($token);
 
-            return new Response('Cette panne a déjà été signalée sur ce poste.');
+            return new Response('Un signalement a déjà été créé pour ce poste aujourd’hui.');
         }
 
         try {
@@ -234,13 +234,9 @@ class ServerController extends AbstractController
         return $glpiData;
     }
 
-    // Méthode privée pour vérifier les limites de signalement par jour pour un email et un PC donnés, et retourner un message d'erreur approprié si la limite est atteinte
-    private function dailyLimitMessage(string $email, string $pcId): ?string
+    // Méthode privée pour vérifier la limite de signalements par jour pour un email.
+    private function dailyLimitMessage(string $email): ?string
     {
-        if ($this->db->hasTicketTodayByEmailAndPc($email, $pcId)) {
-            return 'Vous avez déjà déclaré une panne sur ce poste aujourd’hui.';
-        }
-
         if ($this->db->countTicketsTodayByEmail($email) >= 2) {
             return 'Vous avez atteint la limite de 2 signalements par jour.';
         }

@@ -94,12 +94,19 @@ class FrontController extends AbstractController
         // Nettoie les demandes de validation email expirées.
         $this->db->deleteExpiredPendingTickets();
 
-        // Limite anti-abus : maximum 2 signalements par email et par jour,
-        // et maximum 1 signalement par email sur le même poste dans la journée.
-        if ($limitMessage = $this->dailyLimitMessage($payload['email'], $payload['pc_id'])) {
+        // Limite anti-abus : maximum 2 signalements par email et par jour.
+        if ($limitMessage = $this->dailyLimitMessage($payload['email'])) {
             return $this->render('src/pages/message.html.twig', [
                 'title' => 'Limite atteinte',
                 'message' => $limitMessage,
+            ], new Response('', Response::HTTP_CONFLICT));
+        }
+
+        // Un poste déjà signalé aujourd'hui ne peut pas recevoir un deuxième ticket.
+        if ($this->db->findDuplicateTicket($payload['pc_id'])) {
+            return $this->render('src/pages/message.html.twig', [
+                'title' => 'Poste déjà signalé',
+                'message' => 'Un signalement a déjà été créé pour ce poste aujourd’hui.',
             ], new Response('', Response::HTTP_CONFLICT));
         }
 
@@ -123,14 +130,6 @@ class FrontController extends AbstractController
                 'message' => 'Un email de validation a été envoyé à '.$payload['email'].'.',
                 'email' => $payload['email'],
             ], new Response('', Response::HTTP_ACCEPTED));
-        }
-
-        // Empêche la création d'un ticket identique sur le même poste pendant 24h.
-        if ($this->db->findDuplicateTicket($payload['pc_id'], $payload['type_panne'], $payload['custom_panne'])) {
-            return $this->render('src/pages/message.html.twig', [
-                'title' => 'Panne déjà signalée',
-                'message' => 'Cette panne a déjà été signalée sur ce poste.',
-            ], new Response('', Response::HTTP_CONFLICT));
         }
 
         try {
@@ -229,13 +228,8 @@ class FrontController extends AbstractController
         return $glpiData;
     }
 
-    private function dailyLimitMessage(string $email, string $pcId): ?string
+    private function dailyLimitMessage(string $email): ?string
     {
-        // Un utilisateur ne peut pas déclarer plusieurs pannes sur le même poste le même jour.
-        if ($this->db->hasTicketTodayByEmailAndPc($email, $pcId)) {
-            return 'Vous avez déjà déclaré une panne sur ce poste aujourd’hui.';
-        }
-
         // Un utilisateur ne peut pas dépasser deux signalements par jour.
         if ($this->db->countTicketsTodayByEmail($email) >= 2) {
             return 'Vous avez atteint la limite de 2 signalements par jour.';
