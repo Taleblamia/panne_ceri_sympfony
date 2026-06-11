@@ -1,0 +1,13 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: backend-symfony/Dockerfile
+    container_name: ticket-panne-ceri
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env.local
+    volumes:
+      - ./database.db:/app/backend-symfony/database.db

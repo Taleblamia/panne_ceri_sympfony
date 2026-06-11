@@ -169,6 +169,74 @@ http://10.120.2.212:8001/admin
 
 ---
 
+## Proposition de déploiement avec Docker
+
+L'application Symfony peut être lancée dans un conteneur Docker afin d'éviter d'installer PHP, Composer et les extensions PHP directement sur le serveur.
+
+Avant le lancement, vérifier que le fichier de configuration existe :
+
+```bash
+backend-symfony/.env.local
+```
+
+Sur un serveur, les variables `BACKEND_URL` et `FRONTEND_URL` doivent utiliser l'adresse du serveur ou le nom de domaine :
+
+```env
+BACKEND_URL=http://ADRESSE_DU_SERVEUR:8001
+FRONTEND_URL=http://ADRESSE_DU_SERVEUR:8001
+```
+
+La variable `ALADIN_URL` doit pointer vers le formulaire ALADIN utilisé par l'université :
+
+```env
+ALADIN_URL=https://www.appigs.univ-avignon.fr/extranet/interv_ext.html
+```
+
+Créer le fichier persistant utilisé par l'application :
+
+```bash
+touch backend-symfony/database.db
+```
+
+Lancer l'application avec Docker :
+
+```bash
+cd backend-symfony
+sudo docker-compose up -d --build
+```
+
+Si une autre version de l'application utilise déjà le port `8001`, l'arrêter avant :
+
+```bash
+sudo docker-compose down
+```
+
+L'application sera disponible sur :
+
+```text
+http://localhost:8001
+```
+
+ou depuis le réseau :
+
+```text
+http://ADRESSE_DU_SERVEUR:8001
+```
+
+Commandes utiles :
+
+```bash
+sudo docker-compose logs -f
+sudo docker-compose down
+sudo docker-compose restart
+```
+
+La donnée importante est conservée en dehors du conteneur :
+
+- `backend-symfony/database.db` pour la base SQLite.
+
+---
+
 ## Génération des QR codes
 
 Depuis la racine du projet :
