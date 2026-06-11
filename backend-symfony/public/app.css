@@ -503,7 +503,7 @@ textarea {
   position: relative;
 }
 
-/* Menu de la page d'accueil */
+/* Menu latéral de la page d'accueil */
 .admin-menu-btn {
   position: absolute;
   top: 16px;
@@ -519,38 +519,145 @@ textarea {
   z-index: 10;
 }
 
-.home-menu {
-  position: absolute;
-  top: 62px;
-  left: 16px;
-  width: 245px;
-  background: white;
-  border-radius: 14px;
-  overflow: hidden;
-  z-index: 20;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: 90;
 }
 
-.home-menu button {
-  width: 100%;
-  padding: 15px 18px;
+.menu-overlay.open {
+  opacity: 1;
+}
+
+.home-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(74vw, 315px);
+  height: 100vh;
   background: white;
   color: #111827;
-  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow: 18px 0 35px rgba(15, 23, 42, 0.16);
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+}
+
+.home-menu.open {
+  transform: translateX(0);
+}
+
+.menu-head {
+  height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
   border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-  font-size: 15px;
-  font-weight: 600;
+}
+
+.menu-head strong {
+  color: #111827;
+  font-size: 23px;
+  letter-spacing: 0;
+}
+
+.menu-head strong span {
+  color: #7a7f87;
+}
+
+.menu-head button {
+  width: 42px;
+  height: 42px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 34px;
+  line-height: 1;
   cursor: pointer;
 }
 
-.home-menu button:hover {
-  background: #eef5ff;
+.menu-item {
+  width: 100%;
+  min-height: 58px;
+  padding: 0 24px;
+  background: white;
+  color: #111827;
+  border: none;
+  border-bottom: 0;
+  text-align: left;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.menu-item svg {
+  color: #747b85;
+  flex: 0 0 auto;
+}
+
+.menu-item:hover {
+  background: #f8fbff;
   color: #003bba;
 }
 
-.home-menu button:last-child {
-  border-bottom: none;
+.menu-item:hover svg {
+  color: #003bba;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 24px 0;
+  background: #e5e7eb;
+}
+
+.theme-row {
+  justify-content: space-between;
+}
+
+.theme-label {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.theme-switch {
+  width: 54px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  position: relative;
+  transition: background 0.2s ease;
+  flex: 0 0 auto;
+}
+
+.theme-switch::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.22);
+  transition: transform 0.2s ease;
+}
+
+.theme-switch.active {
+  background: #0b45d1;
+}
+
+.theme-switch.active::after {
+  transform: translateX(22px);
 }
 
 .admin-toolbar {
@@ -1337,6 +1444,25 @@ body.dark .report-card textarea {
   border: 1px solid #4b5563;
 }
 
+body.dark .email-box span {
+  background: #2b2b2b;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+body.dark .field-help,
+body.dark .char-count {
+  color: #93a4c7;
+}
+
+body.dark input[type="file"]::file-selector-button {
+  background: #111827;
+  color: white;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
 body.light .manual-box input,
 body.light .report-card input,
 body.light .report-card select,
@@ -1360,17 +1486,40 @@ body.dark .ticket-row strong {
 }
 
 body.dark .home-menu {
-  background: #4b4b4b;
-}
-
-body.dark .home-menu button {
-  background: #4b4b4b;
+  background: #111827;
   color: white;
-  border-color: #666;
 }
 
-body.dark .home-menu button:hover {
-  background: #5a5a5a;
+body.dark .menu-head {
+  border-color: #243044;
+}
+
+body.dark .menu-head strong,
+body.dark .menu-item {
+  background: #111827;
+  color: white;
+}
+
+body.dark .menu-head strong span {
+  color: #9ca3af;
+}
+
+body.dark .menu-head button,
+body.dark .menu-item svg {
+  color: #d1d5db;
+}
+
+body.dark .menu-item:hover {
+  background: #1f2937;
+  color: #8ab4ff;
+}
+
+body.dark .menu-item:hover svg {
+  color: #8ab4ff;
+}
+
+body.dark .menu-separator {
+  background: #243044;
 }
 
 body.dark .stat-line {
@@ -1426,4 +1575,29 @@ body.dark .admin-tabs button {
 
 body.dark .admin-tabs button.active {
   background: #073bb8;
+}
+
+/* Sur un vrai téléphone, l'application prend toute la largeur de l'écran.
+   La carte centrée sert seulement pour l'affichage maquette sur ordinateur. */
+@media (max-width: 520px) {
+  .home-page,
+  .report-page {
+    align-items: stretch;
+    padding: 0;
+    min-height: 100dvh;
+  }
+
+  .home-card,
+  .report-card {
+    max-width: none;
+    width: 100%;
+    min-height: 100dvh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .admin-card {
+    max-width: none;
+  }
 }

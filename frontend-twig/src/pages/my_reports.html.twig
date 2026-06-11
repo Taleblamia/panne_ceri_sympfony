@@ -7,10 +7,41 @@
   <div class="report-page">
     <div class="report-card my-reports-card">
       <div class="mobile-topbar">
-        <button class="back-icon-btn" type="button" onclick="window.location.href='/'" aria-label="Retour">
-          <i data-lucide="chevron-left" width="24" height="24"></i>
+        <button class="back-icon-btn" type="button" id="menuButton" aria-label="Menu">
+          <i data-lucide="menu" width="24" height="24"></i>
         </button>
         <h1 data-i18n="myReports">Mes signalements</h1>
+      </div>
+
+      {# Menu latéral identique à celui de l'accueil. #}
+      <div class="menu-overlay" id="menuOverlay" hidden></div>
+      <div class="home-menu" id="homeMenu" hidden>
+        <div class="menu-head">
+          <strong>Ticket<span>Panne</span></strong>
+          <button type="button" id="closeMenuButton" aria-label="Fermer le menu">×</button>
+        </div>
+
+        <button type="button" class="menu-item" onclick="window.location.href='/'">
+          <i data-lucide="home" width="25" height="25"></i>
+          <span>Accueil</span>
+        </button>
+        <button type="button" class="menu-item" id="languageButton">
+          <i data-lucide="globe" width="25" height="25"></i>
+          <span data-i18n="language">Passer en anglais</span>
+        </button>
+        <button type="button" class="menu-item" onclick="window.location.href='/mes-signalements'">
+          <i data-lucide="clipboard-list" width="25" height="25"></i>
+          <span data-i18n="myReports">Mes signalements</span>
+        </button>
+        <div class="menu-separator"></div>
+
+        <button type="button" class="menu-item theme-row" id="themeButton">
+          <span class="theme-label">
+            <i data-lucide="moon" width="25" height="25"></i>
+            <span id="themeLabel">Thème sombre</span>
+          </span>
+          <span class="theme-switch" id="themeSwitch" aria-hidden="true"></span>
+        </button>
       </div>
 
       {% if email %}
@@ -71,6 +102,56 @@
     const imageModal = document.getElementById("myImageModal");
     const imagePreview = document.getElementById("myImagePreview");
     const closeImage = document.getElementById("closeMyImage");
+    const menuButton = document.getElementById("menuButton");
+    const homeMenu = document.getElementById("homeMenu");
+    const menuOverlay = document.getElementById("menuOverlay");
+    const closeMenuButton = document.getElementById("closeMenuButton");
+    const themeButton = document.getElementById("themeButton");
+    const themeLabel = document.getElementById("themeLabel");
+    const themeSwitch = document.getElementById("themeSwitch");
+
+    function openMenu() {
+      homeMenu.hidden = false;
+      menuOverlay.hidden = false;
+      requestAnimationFrame(() => {
+        homeMenu.classList.add("open");
+        menuOverlay.classList.add("open");
+      });
+    }
+
+    function closeMenu() {
+      homeMenu.classList.remove("open");
+      menuOverlay.classList.remove("open");
+      setTimeout(() => {
+        homeMenu.hidden = true;
+        menuOverlay.hidden = true;
+      }, 180);
+    }
+
+    function refreshThemeButton() {
+      const darkMode = document.body.classList.contains("dark");
+      themeLabel.textContent = darkMode ? "Thème clair" : "Thème sombre";
+      themeSwitch.classList.toggle("active", darkMode);
+    }
+
+    menuButton.addEventListener("click", openMenu);
+    closeMenuButton.addEventListener("click", closeMenu);
+    menuOverlay.addEventListener("click", closeMenu);
+
+    themeButton.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      document.body.classList.toggle("light");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+      refreshThemeButton();
+    });
+
+    document.getElementById("languageButton").addEventListener("click", () => {
+      localStorage.setItem("language", currentLanguage() === "fr" ? "en" : "fr");
+      applyLanguage();
+      refreshThemeButton();
+    });
+
+    document.addEventListener("DOMContentLoaded", refreshThemeButton);
 
     function label(ticket) {
       // Affiche la panne personnalisée si le type est "Autre".

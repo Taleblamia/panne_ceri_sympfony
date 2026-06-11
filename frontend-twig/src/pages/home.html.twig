@@ -12,12 +12,35 @@
 
       <button class="admin-menu-btn" type="button" id="menuButton">☰</button>
 
-      {# Menu rapide : langue, thème, mes signalements et espace admin. #}
+      {# Menu latéral : options générales de l'application. #}
+      <div class="menu-overlay" id="menuOverlay" hidden></div>
       <div class="home-menu" id="homeMenu" hidden>
-        <button type="button" id="languageButton">🌐 <span data-i18n="language">Passer en anglais</span></button>
-        <button type="button" id="themeButton">🌙 Mode sombre</button>
-        <button type="button" id="myReportsButton">☑ <span data-i18n="myReports">Mes signalements</span></button>
-        <button type="button" onclick="window.location.href='/admin'">↪ <span data-i18n="admin">Espace admin</span></button>
+        <div class="menu-head">
+          <strong>Ticket<span>Panne</span></strong>
+          <button type="button" id="closeMenuButton" aria-label="Fermer le menu">×</button>
+        </div>
+
+        <button type="button" class="menu-item" onclick="window.location.href='/'">
+          <i data-lucide="home" width="25" height="25"></i>
+          <span>Accueil</span>
+        </button>
+        <button type="button" class="menu-item" id="languageButton">
+          <i data-lucide="globe" width="25" height="25"></i>
+          <span data-i18n="language">Passer en anglais</span>
+        </button>
+        <button type="button" class="menu-item" id="myReportsButton">
+          <i data-lucide="clipboard-list" width="25" height="25"></i>
+          <span data-i18n="myReports">Mes signalements</span>
+        </button>
+        <div class="menu-separator"></div>
+
+        <button type="button" class="menu-item theme-row" id="themeButton">
+          <span class="theme-label">
+            <i data-lucide="moon" width="25" height="25"></i>
+            <span id="themeLabel">Thème sombre</span>
+          </span>
+          <span class="theme-switch" id="themeSwitch" aria-hidden="true"></span>
+        </button>
       </div>
 
       <div class="home-content">
@@ -50,37 +73,57 @@
     // Éléments principaux de la page d'accueil.
     const menuButton = document.getElementById("menuButton");
     const homeMenu = document.getElementById("homeMenu");
+    const menuOverlay = document.getElementById("menuOverlay");
+    const closeMenuButton = document.getElementById("closeMenuButton");
     const themeButton = document.getElementById("themeButton");
+    const themeLabel = document.getElementById("themeLabel");
+    const themeSwitch = document.getElementById("themeSwitch");
     const continueButton = document.getElementById("continueButton");
+    const pcCodeInput = document.getElementById("pcCode");
     const scanButton = document.getElementById("scanButton");
     const reader = document.getElementById("reader");
 
-    menuButton.addEventListener("click", (event) => {
-      // Ouvre ou ferme le menu.
-      event.stopPropagation();
-      homeMenu.hidden = !homeMenu.hidden;
-    });
+    function openMenu() {
+      homeMenu.hidden = false;
+      menuOverlay.hidden = false;
+      requestAnimationFrame(() => {
+        homeMenu.classList.add("open");
+        menuOverlay.classList.add("open");
+      });
+    }
 
-    document.addEventListener("click", () => {
-      homeMenu.hidden = true;
-    });
+    function closeMenu() {
+      homeMenu.classList.remove("open");
+      menuOverlay.classList.remove("open");
+      setTimeout(() => {
+        homeMenu.hidden = true;
+        menuOverlay.hidden = true;
+      }, 180);
+    }
 
-    homeMenu.addEventListener("click", (event) => {
-      event.stopPropagation();
-    });
+    function refreshThemeButton() {
+      const darkMode = document.body.classList.contains("dark");
+      themeLabel.textContent = darkMode ? "Thème clair" : "Thème sombre";
+      themeSwitch.classList.toggle("active", darkMode);
+    }
+
+    menuButton.addEventListener("click", openMenu);
+    closeMenuButton.addEventListener("click", closeMenu);
+    menuOverlay.addEventListener("click", closeMenu);
 
     themeButton.addEventListener("click", () => {
       // Active/désactive le mode sombre et le sauvegarde.
       document.body.classList.toggle("dark");
       document.body.classList.toggle("light");
       localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-      themeButton.textContent = document.body.classList.contains("dark") ? "☀️ Mode clair" : "🌙 Mode sombre";
+      refreshThemeButton();
     });
 
     document.getElementById("languageButton").addEventListener("click", () => {
       // Change la langue de l'interface.
       localStorage.setItem("language", currentLanguage() === "fr" ? "en" : "fr");
       applyLanguage();
+      refreshThemeButton();
     });
 
     document.getElementById("myReportsButton").addEventListener("click", () => {
@@ -97,9 +140,14 @@
       window.location.href = "/mes-signalements?email=" + encodeURIComponent((emailPrefix + suffix).toLowerCase());
     });
 
+    pcCodeInput.addEventListener("input", () => {
+      // Le code poste est toujours traité en minuscule.
+      pcCodeInput.value = pcCodeInput.value.toLowerCase();
+    });
+
     continueButton.addEventListener("click", () => {
       // Redirige vers le formulaire à partir du code poste saisi.
-      const code = document.getElementById("pcCode").value.trim().toLowerCase();
+      const code = pcCodeInput.value.trim().toLowerCase();
 
       if (!code) {
         alert((i18n[currentLanguage()] || i18n.fr).enterCode);
@@ -156,5 +204,7 @@
         () => {}
       ).catch(() => alert("Impossible d'accéder à la caméra."));
     });
+
+    document.addEventListener("DOMContentLoaded", refreshThemeButton);
   </script>
 {% endblock %}
