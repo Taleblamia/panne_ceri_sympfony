@@ -27,41 +27,24 @@ class Database
         $this->pdo->exec("DELETE FROM pending_tickets WHERE expires_at < datetime('now')");
     }
 
-    public function findDuplicateTicket(string $pcId, string $typePanne, ?string $customPanne): ?array
+    public function findDuplicateTicket(string $pcId): ?array
     {
-        // Evite de declarer la meme panne sur le meme poste pendant 24h.
+        // Un poste ne peut avoir qu'un seul signalement par jour, peu importe la panne.
         $statement = $this->pdo->prepare("
             SELECT *
             FROM tickets
             WHERE pc_id = ?
-              AND type_panne = ?
-              AND IFNULL(custom_panne, '') = IFNULL(?, '')
-              AND created_at >= datetime('now', '-24 hours')
+              AND date(created_at, 'localtime') = date('now', 'localtime')
             LIMIT 1
         ");
-        $statement->execute([$pcId, $typePanne, $customPanne]);
+        $statement->execute([$pcId]);
 
         return $statement->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function hasTicketTodayByEmailAndPc(string $email, string $pcId): bool
-    {
-        // Un utilisateur ne peut declarer qu'une panne par jour sur le meme poste.
-        $statement = $this->pdo->prepare("
-            SELECT COUNT(*)
-            FROM tickets
-            WHERE lower(email) = lower(?)
-              AND pc_id = ?
-              AND date(created_at, 'localtime') = date('now', 'localtime')
-        ");
-        $statement->execute([$email, $pcId]);
-
-        return (int) $statement->fetchColumn() > 0;
-    }
-
     public function countTicketsTodayByEmail(string $email): int
     {
-        // Limite globale : maximum deux signalements par utilisateur et par jour.
+        // Un utilisateur peut creer au maximum deux signalements par jour.
         $statement = $this->pdo->prepare("
             SELECT COUNT(*)
             FROM tickets

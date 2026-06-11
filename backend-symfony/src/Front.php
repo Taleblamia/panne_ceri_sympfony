@@ -51,9 +51,9 @@ class Front extends AbstractController
             ], $request, $mailer);
 
             if ($result['status'] === 'duplicate') {
-                $error = 'Cette panne a déjà été signalée sur ce poste.';
+                $error = 'Un signalement a déjà été créé pour ce poste aujourd’hui.';
             } elseif ($result['status'] === 'limit') {
-                $error = $result['message'];
+                $error = 'Vous avez atteint la limite de 2 signalements par jour.';
             } elseif ($result['status'] === 'validation_sent') {
                 $waitingEmail = $email;
             } elseif ($result['status'] === 'created') {

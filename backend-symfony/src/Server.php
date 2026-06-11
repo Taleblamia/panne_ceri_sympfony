@@ -53,11 +53,11 @@ class Server extends AbstractController
         }
 
         if ($result['status'] === 'duplicate') {
-            return $this->json(['message' => 'Cette panne a déjà été signalée sur ce poste.'], 409);
+            return $this->json(['message' => 'Un signalement a déjà été créé pour ce poste aujourd’hui.'], 409);
         }
 
         if ($result['status'] === 'limit') {
-            return $this->json(['message' => $result['message']], 409);
+            return $this->json(['message' => 'Vous avez atteint la limite de 2 signalements par jour.'], 409);
         }
 
         if ($result['status'] === 'validation_sent') {
@@ -92,18 +92,16 @@ class Server extends AbstractController
             'description' => $pendingTicket['description'],
         ];
 
-        $limitMessage = $this->dailyLimitMessage($ticket['email'], $ticket['pc_id']);
-
-        if ($limitMessage) {
+        if ($this->database->findDuplicateTicket($ticket['pc_id'])) {
             $this->database->deletePendingTicket($token);
 
-            return new Response($limitMessage);
+            return new Response('Un signalement a déjà été créé pour ce poste aujourd’hui.');
         }
 
-        if ($this->database->findDuplicateTicket($ticket['pc_id'], $ticket['type_panne'], $ticket['custom_panne'])) {
+        if ($this->database->countTicketsTodayByEmail($ticket['email']) >= 2) {
             $this->database->deletePendingTicket($token);
 
-            return new Response('Cette panne a déjà été signalée sur ce poste.');
+            return new Response('Vous avez atteint la limite de 2 signalements par jour.');
         }
 
         $this->database->addVerifiedUser($pendingTicket['email'], $pendingTicket['device_fingerprint']);
@@ -134,17 +132,12 @@ class Server extends AbstractController
             'description' => trim((string) ($data['description'] ?? '')),
         ];
 
-        if ($this->database->findDuplicateTicket($ticket['pc_id'], $ticket['type_panne'], $ticket['custom_panne'])) {
+        if ($this->database->findDuplicateTicket($ticket['pc_id'])) {
             return ['status' => 'duplicate'];
         }
 
-        $limitMessage = $this->dailyLimitMessage($ticket['email'], $ticket['pc_id']);
-
-        if ($limitMessage) {
-            return [
-                'status' => 'limit',
-                'message' => $limitMessage,
-            ];
+        if ($this->database->countTicketsTodayByEmail($ticket['email']) >= 2) {
+            return ['status' => 'limit'];
         }
 
         $fingerprint = $this->deviceFingerprint($request);
@@ -165,19 +158,6 @@ class Server extends AbstractController
             'status' => 'created',
             'redirectUrl' => $this->aladin->buildUrl($ticket),
         ];
-    }
-
-    private function dailyLimitMessage(string $email, string $pcId): ?string
-    {
-        if ($this->database->hasTicketTodayByEmailAndPc($email, $pcId)) {
-            return 'Vous avez déjà déclaré une panne sur ce poste aujourd’hui.';
-        }
-
-        if ($this->database->countTicketsTodayByEmail($email) >= 2) {
-            return 'Vous avez atteint la limite de 2 signalements par jour.';
-        }
-
-        return null;
     }
 
     private function sendValidationEmail(MailerInterface $mailer, string $emailAddress, string $token): void
