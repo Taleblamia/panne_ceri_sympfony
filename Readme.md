@@ -244,6 +244,84 @@ http://localhost:8080
 
 ---
 
+## Proposition de déploiement avec Docker
+
+L'application Symfony peut être lancée dans un conteneur Docker afin d'éviter d'installer PHP, Composer et les extensions PHP directement sur le serveur.
+
+Avant le lancement, vérifier que le fichier de configuration existe :
+
+```bash
+backend-symfony/.env.local
+```
+
+Sur un serveur, les variables `BACKEND_URL` et `FRONTEND_URL` doivent utiliser l'adresse du serveur ou le nom de domaine :
+
+```env
+BACKEND_URL=http://ADRESSE_DU_SERVEUR:8001
+FRONTEND_URL=http://ADRESSE_DU_SERVEUR:8001
+```
+
+Si GLPI est installé sur la même machine que Docker, il ne faut pas forcément utiliser `localhost` depuis le conteneur. Il est possible d'utiliser :
+
+```env
+GLPI_URL=http://host.docker.internal:8080/apirest.php
+```
+
+Créer les fichiers persistants utilisés par l'application :
+
+```bash
+touch backend-symfony/database.db
+mkdir -p backend-symfony/public/uploads/tickets
+```
+
+Lancer l'application avec Docker :
+
+```bash
+cd backend-symfony
+docker compose up -d --build
+```
+
+Si la commande `docker compose` n'est pas disponible, utiliser l'ancienne forme :
+
+```bash
+docker-compose up -d --build
+```
+
+L'application sera disponible sur :
+
+```text
+http://localhost:8001
+```
+
+ou depuis le réseau :
+
+```text
+http://ADRESSE_DU_SERVEUR:8001
+```
+
+Commandes utiles :
+
+```bash
+docker compose logs -f
+docker compose down
+docker compose restart
+```
+
+Avec l'ancienne commande :
+
+```bash
+docker-compose logs -f
+docker-compose down
+docker-compose restart
+```
+
+Les données importantes sont conservées en dehors du conteneur :
+
+- `backend-symfony/database.db` pour la base SQLite ;
+- `backend-symfony/public/uploads/` pour les images jointes.
+
+---
+
 ## Routes principales
 
 Pages Twig :
